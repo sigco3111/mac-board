@@ -45,4 +45,4 @@ export interface User {
   email?: string;
   photoURL?: string;
   isAnonymous?: boolean;
-}
+} 

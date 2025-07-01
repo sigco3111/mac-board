@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Helvetica Neue', sans-serif;
+  }
+  
+  body {
+    @apply bg-mac-light text-mac-dark;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  .mac-window {
+    @apply bg-mac-window backdrop-blur-mac shadow-mac-window rounded-lg border border-mac-border overflow-hidden;
+  }
+  
+  .mac-button {
+    @apply px-4 py-1.5 rounded-md bg-mac-blue text-white font-medium hover:opacity-90 transition-opacity;
+  }
+  
+  .mac-input {
+    @apply px-3 py-2 rounded-md border border-mac-border focus:outline-none focus:ring-2 focus:ring-mac-blue;
+  }
+} 
