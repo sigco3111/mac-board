@@ -2,36 +2,42 @@
 
 ## 1. 프로젝트 개요
 
-- MAC-BOARD는 Mac OS 인터페이스에서 영감을 받은 직관적인 온라인 게시판 시스템
+- MAC-BOARD는 Mac OS 인터페이스를 모방한 온라인 게시판 시스템
 - **기술 스택**: React, TypeScript, Tailwind CSS, Firebase
-- **주요 기능**: 게시물 CRUD, 구글 로그인, 마크다운 지원, 북마크 시스템, 반응형 디자인
+- **핵심 기능**: 게시물 CRUD, 구글 및 익명 로그인, 마크다운 지원, 북마크 시스템, 반응형 디자인
 
 ## 2. 프로젝트 아키텍처
 
 ### 2.1 폴더 구조
 
-- `components/`: 모든 UI 컴포넌트 (현재 가장 활발한 개발 영역)
-- `services/`: 외부 서비스(Firebase) 연동 코드 (반드시 여기에 구현)
-- `hooks/`: React 커스텀 훅 (상태 관리, 로직 재사용)
-- `utils/`: 유틸리티 함수 (날짜 포맷팅, 데이터 처리 등)
-- `assets/`: 이미지, 아이콘 등 정적 리소스
-- `types.ts`: 핵심 타입 정의 파일
+- `src/components/`: 모든 UI 컴포넌트를 이곳에 배치하라
+- `src/services/firebase/`: Firebase 연동 코드는 반드시 이 폴더에만 구현하라
+- `src/hooks/`: React 커스텀 훅을 이곳에 구현하라
+- `src/utils/`: 유틸리티 함수만 이곳에 배치하라
+- `src/types/`: 타입 정의는 반드시 이 폴더 내의 파일에만 작성하라
 
-### 2.2 주요 파일 역할
+### 2.2 중복 파일 처리 규칙
 
-- `App.tsx`: 애플리케이션 진입점, 상태 관리, 라우팅
-- `types.ts`: 타입 정의 (Post, Category, User 등)
-- `components/BulletinBoard.tsx`: 메인 게시판 컴포넌트
-- `components/LoginScreen.tsx`: 로그인 화면
-- `components/Desktop.tsx`: 바탕화면 환경 시뮬레이션
-- `components/NewPostModal.tsx`: 게시물 작성/편집 모달
+- **루트와 src의 App.tsx**: 반드시 `src/App.tsx`만 사용하고 수정하라. 루트의 App.tsx는 레거시로 취급하며 절대 수정하지 마라.
+- **types.ts와 src/types/index.ts**: 반드시 `src/types/index.ts`를 사용하라. 루트의 types.ts는 레거시로 간주하고 절대 수정하지 마라.
+- **모든 작업은 src/ 디렉토리 내부의 파일만 대상으로 하라.**
+
+### 2.3 주요 파일 역할
+
+- `src/App.tsx`: 애플리케이션 진입점, 라우팅, 인증 상태 관리
+- `src/types/index.ts`: 모든 타입 정의 (Post, Category, User 등)
+- `src/services/firebase/config.ts`: Firebase 설정 (환경변수 사용 필수)
+- `src/services/firebase/auth.ts`: 인증 관련 함수 (로그인, 로그아웃 등)
+- `src/services/firebase/firestore.ts`: Firestore 데이터베이스 접근 함수
+- `src/hooks/useAuth.ts`: 인증 상태 관리 훅
+- `src/hooks/usePosts.ts`: 게시물 데이터 관리 훅
 
 ## 3. 코드 작성 표준
 
 ### 3.1 주석 규칙
 
-- 모든 함수와 주요 로직 상단에 한국어로 목적 설명
-- 복잡한 로직에는 한국어로 맥락 설명 필수
+- 모든 함수와 주요 로직 상단에 한국어로 목적 설명을 반드시 작성하라
+- 복잡한 로직에는 한국어로 맥락 설명을 추가하라
 
 ```tsx
 /**
@@ -53,16 +59,17 @@ const filterPosts = (posts: Post[], category: string, tag: string | null) => {
 
 ### 3.2 네이밍 규칙
 
-- **상수**: 대문자와 언더스코어 (`MAX_POSTS_PER_PAGE`)
-- **Boolean 변수**: is, has, can으로 시작 (`isVisible`, `hasPermission`)
-- **함수**: 동사로 시작하는 camelCase (`fetchPosts`, `handleSubmit`)
-- **컴포넌트**: PascalCase (`PostList`, `LoginButton`)
+- **상수**: 대문자와 언더스코어를 사용하라 (`MAX_POSTS_PER_PAGE`, `AUTH_STATE_KEY`)
+- **Boolean 변수**: is, has, can으로 시작하는 이름을 사용하라 (`isVisible`, `hasPermission`)
+- **함수**: 동사로 시작하는 camelCase를 사용하라 (`fetchPosts`, `handleSubmit`)
+- **컴포넌트**: PascalCase를 사용하라 (`PostList`, `LoginButton`)
+- **인터페이스/타입**: PascalCase를 사용하고 인터페이스는 'I' 접두사 없이 작성하라 (`Post`, `User`)
 
 ### 3.3 에러 처리
 
-- 모든 비동기 작업은 try-catch로 처리
-- 에러 발생 시 로그 기록 및 사용자 친화적 메시지 제공
-- 에러 메시지는 구체적이지 않게 일반화
+- 모든 비동기 함수는 반드시 try-catch로 감싸라
+- 에러 발생 시 로그를 기록하고 사용자에게는 일반화된 메시지를 제공하라
+- Firebase 오류 코드에 따라 적절한 처리를 구현하라
 
 ```tsx
 try {
@@ -76,59 +83,60 @@ try {
 
 ## 4. Firebase 연동 규칙
 
-### 4.1 Firebase 구성
+### 4.1 Firebase 환경변수
 
-- `services/firebase/config.ts`: Firebase 설정 정보 (반드시 환경변수 사용)
-- `services/firebase/auth.ts`: 인증 관련 함수
-- `services/firebase/firestore.ts`: Firestore 데이터 액세스 함수
-
-### 4.2 인증 구현
+- Firebase 설정은 반드시 환경변수를 사용하여 구현하라
+- 환경변수는 `.env` 파일에 `VITE_` 접두사로 정의하라
+- 환경변수가 없을 경우 대체 로직을 반드시 포함하라
 
 ```tsx
-// services/firebase/auth.ts
-import { auth } from './config';
-import { GoogleAuthProvider, signInWithPopup, signInAnonymously as signInAnonymouslyFirebase } from 'firebase/auth';
-
-/**
- * 구글 계정으로 로그인하는 함수
- */
-export const signInWithGoogle = async () => {
-  const provider = new GoogleAuthProvider();
-  try {
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
-  } catch (error) {
-    console.error('구글 로그인 오류:', error);
-    throw error;
-  }
+// 올바른 예시
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  // 나머지 설정...
 };
 
-/**
- * 익명으로 로그인하는 함수
- */
-export const signInAnonymously = async () => {
-  try {
-    const result = await signInAnonymouslyFirebase(auth);
-    return result.user;
-  } catch (error) {
-    console.error('익명 로그인 오류:', error);
-    throw error;
+// 금지된 예시 - 하드코딩된 값 사용
+const firebaseConfig = {
+  apiKey: "AIzaSyA1AbCdEfGhIjKlMnOpQrStUvWxYz",
+  authDomain: "mac-board.firebaseapp.com",
+  // 나머지 설정...
+};
+```
+
+### 4.2 인증 관련 구현
+
+- 로그인 상태는 로컬 스토리지에 저장하고 24시간 유효 기간을 설정하라
+- 로그아웃 시 `AUTH_STATE_KEY`, `LOGOUT_FLAG_KEY` 등 모든 관련 스토리지를 정리하라
+- 인증 상태 감지를 위해 Firebase의 `onAuthStateChanged`를 사용하라
+- 로그인/로그아웃 상태 관리는 `src/hooks/useAuth.ts` 훅을 통해서만 처리하라
+
+```tsx
+// 로컬 스토리지에 로그인 상태 저장 예시
+const saveAuthState = (isLoggedIn: boolean, user?: User | null) => {
+  if (isLoggedIn && user) {
+    localStorage.setItem(AUTH_STATE_KEY, JSON.stringify({
+      isLoggedIn: true,
+      user: user,
+      timestamp: Date.now() // 24시간 유효
+    }));
+  } else {
+    localStorage.removeItem(AUTH_STATE_KEY);
   }
 };
 ```
 
 ### 4.3 Firestore 데이터 액세스
 
-```tsx
-// services/firebase/firestore.ts
-import { db } from './config';
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
-import type { Post } from '../../types';
+- Firestore 데이터 접근 함수는 `src/services/firebase/firestore.ts`에만 구현하라
+- 데이터 조회 시 항상 쿼리 최적화를 고려하라
+- 실시간 업데이트가 필요한 기능에만 `onSnapshot`을 사용하라
+- 트랜잭션이 필요한 작업은 반드시 Firestore 트랜잭션 API를 사용하라
 
-/**
- * 게시물 목록을 가져오는 함수
- * 카테고리가 지정된 경우 해당 카테고리의 게시물만 반환
- */
+```tsx
+// 게시물 조회 함수 예시
 export const fetchPosts = async (category?: string) => {
   try {
     let postsQuery;
@@ -146,291 +154,119 @@ export const fetchPosts = async (category?: string) => {
     throw error;
   }
 };
-
-/**
- * 새 게시물을 생성하는 함수
- */
-export const createPost = async (post: Omit<Post, 'id'>) => {
-  try {
-    const docRef = await addDoc(collection(db, 'posts'), {
-      ...post,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      viewCount: 0,
-      bookmarkCount: 0
-    });
-    
-    return docRef.id;
-  } catch (error) {
-    console.error('게시물 생성 오류:', error);
-    throw error;
-  }
-};
-```
-
-### 4.4 인증 상태 관리 (커스텀 훅)
-
-```tsx
-// hooks/useAuth.ts
-import { useState, useEffect } from 'react';
-import { auth } from '../services/firebase/config';
-import { onAuthStateChanged } from 'firebase/auth';
-import type { User } from '../types';
-
-/**
- * 사용자 인증 상태를 관리하는 커스텀 훅
- */
-export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser({
-          name: firebaseUser.displayName || '사용자',
-          avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/96?u=${firebaseUser.uid}`,
-          uid: firebaseUser.uid
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-    
-    return unsubscribe;
-  }, []);
-  
-  return { user, loading };
-};
 ```
 
 ## 5. 컴포넌트 관리 및 확장
 
-### 5.1 기존 컴포넌트 수정 규칙
+### 5.1 기존 컴포넌트 수정
 
-- 컴포넌트 인터페이스(props)를 변경할 때는 타입 정의 수정 필수
-- 컴포넌트 상태 관리는 내부에서 처리하고 이벤트는 props로 전달
-- 기존 컴포넌트 수정 시 일관된 스타일 유지
+- 컴포넌트의 props 타입을 변경할 때는 반드시 관련 인터페이스도 함께 수정하라
+- 컴포넌트 상태 관리는 내부에서 처리하고 이벤트는 props로 전달하라
+- 기존 컴포넌트를 수정할 때는 반드시 기존 스타일과 패턴을 유지하라
 
-### 5.2 새 컴포넌트 추가 규칙
+### 5.2 새 컴포넌트 추가
 
-- 단일 책임 원칙 준수 (한 컴포넌트는 한 가지 역할만)
-- Props 타입 인터페이스 명시적 정의
-- 컴포넌트 파일명은 PascalCase로 작성
+- 단일 책임 원칙을 반드시 준수하라 (한 컴포넌트는 한 가지 책임만 가져야 함)
+- 컴포넌트 파일명은 PascalCase로 작성하고 `.tsx` 확장자를 사용하라
+- 모든 컴포넌트는 명시적으로 props 타입 인터페이스를 정의하라
+- 컴포넌트는 `export default` 형태로 내보내라
 
 ```tsx
-// 올바른 예: MarkdownPreview.tsx
+// 올바른 예시
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
 
-interface MarkdownPreviewProps {
+interface CommentItemProps {
+  author: string;
   content: string;
-  className?: string;
+  date: string;
+  onDelete?: () => void;
 }
 
 /**
- * 마크다운 콘텐츠를 렌더링하는 컴포넌트
+ * 개별 댓글을 표시하는 컴포넌트
  */
-const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className }) => {
+const CommentItem: React.FC<CommentItemProps> = ({ author, content, date, onDelete }) => {
   return (
-    <div className={`markdown-preview ${className || ''}`}>
-      <ReactMarkdown>{content}</ReactMarkdown>
-    </div>
+    // 컴포넌트 구현
   );
 };
 
-export default MarkdownPreview;
+export default CommentItem;
 ```
 
-### 5.3 Tailwind CSS 사용 규칙
+### 5.3 Tailwind CSS 사용
 
-- 일관된 색상 및 간격 사용 (커스텀 테마 참조)
-- 반응형 클래스 적절히 사용 (`md:`, `lg:` 등)
-- 복잡한 스타일은 컴포넌트로 추출
-
-## 6. 마크다운 및 북마크 기능
-
-### 6.1 마크다운 지원
-
-- react-markdown 패키지 사용
-- NewPostModal에서 마크다운 입력 및 프리뷰 기능 구현
-- 마크다운 에디터와 프리뷰를 탭으로 전환 가능하게 구현
+- 모든 스타일은 인라인 Tailwind 클래스를 사용하라
+- 복잡한 스타일은 추출하여 별도 컴포넌트로 만들어라
+- 반응형 디자인을 위해 `sm:`, `md:`, `lg:` 접두사를 적절히 사용하라
+- Mac OS 스타일을 위해 정의된 커스텀 색상 (`mac-light`, `mac-dark` 등)을 사용하라
 
 ```tsx
-// 마크다운 프리뷰 탭 구현 예시
-const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
+// 올바른 예시
+<button className="bg-mac-blue hover:bg-mac-blue-dark text-white px-4 py-2 rounded-md">
+  로그인
+</button>
 
-return (
-  <div>
-    <div className="flex border-b mb-4">
-      <button 
-        onClick={() => setActiveTab('write')} 
-        className={`py-2 px-4 ${activeTab === 'write' ? 'border-b-2 border-blue-500' : ''}`}
-      >
-        작성
-      </button>
-      <button 
-        onClick={() => setActiveTab('preview')} 
-        className={`py-2 px-4 ${activeTab === 'preview' ? 'border-b-2 border-blue-500' : ''}`}
-      >
-        미리보기
-      </button>
-    </div>
-    
-    {activeTab === 'write' ? (
-      <textarea 
-        value={content} 
-        onChange={(e) => setContent(e.target.value)} 
-        className="w-full p-2 border rounded"
-      />
-    ) : (
-      <MarkdownPreview content={content} className="p-2 border rounded" />
-    )}
-  </div>
-);
+// 금지된 예시 - 인라인 스타일
+<button style={{ backgroundColor: '#0066CC', color: 'white', padding: '8px 16px' }}>
+  로그인
+</button>
 ```
 
-### 6.2 북마크 시스템
+## 6. 파일 의존성 및 연관관계
 
-- 북마크 데이터 모델:
-  ```tsx
-  interface Bookmark {
-    id: string;
-    userId: string;
-    postId: string;
-    createdAt: string;
-    folder?: string;
-  }
-  ```
+### 6.1 함께 수정해야 하는 파일
 
-- 북마크 상태 관리는 전역 상태 또는 컨텍스트 사용
-- 바탕화면에 북마크 폴더 아이콘 추가
-- 북마크 폴더 클릭 시 북마크된 게시물 목록 표시
+다음 파일은 항상 함께 검토하고 필요시 동시에 수정하라:
 
-## 7. 반응형 디자인
+- `src/types/index.ts`와 해당 타입을 사용하는 컴포넌트
+- `src/hooks/useAuth.ts`와 `src/services/firebase/auth.ts`
+- `src/hooks/usePosts.ts`와 `src/services/firebase/firestore.ts`
+- `src/App.tsx`와 인증 관련 컴포넌트 (`LoginScreen.tsx`, `Desktop.tsx` 등)
 
-### 7.1 모바일 최적화
+### 6.2 타입 정의 관리
 
-- 기본 화면 사이즈는 최소 320px 기준으로 디자인
-- 모바일에서는 메뉴 축소 및 햄버거 메뉴 사용
-- 작은 화면에서 게시판은 목록만 보이고 상세보기는 전체 화면으로 전환
+- 모든 공통 타입은 `src/types/index.ts`에 정의하라
+- 컴포넌트 특화 타입(props 등)은 해당 컴포넌트 파일 내에 정의하라
+- 타입 이름 충돌을 방지하기 위해 네이밍 컨벤션을 준수하라 (예: `PostProps`, `PostItemProps`)
 
-### 7.2 반응형 클래스 사용
+## 7. AI 의사결정 기준
 
-```tsx
-// 반응형 레이아웃 예시
-<div className="flex flex-col md:flex-row">
-  <Sidebar className="w-full md:w-60 mb-4 md:mb-0" />
-  <div className="flex-grow">
-    <PostList />
-  </div>
-</div>
-```
+### 7.1 우선순위 결정
 
-### 7.3 모바일 제스처 지원
+코드 수정 시 다음 우선순위를 따르라:
 
-- 터치 이벤트 및 스와이프 제스처 구현
-- 모바일에서 편리한 네비게이션 경험 제공
+1. 보안 관련 문제 (Firebase 키 노출 등) 해결
+2. 에러 처리 및 예외 상황 대응
+3. 코드 일관성 및 구조 유지
+4. 기능 개선 및 최적화
 
-## 8. 작업 흐름 가이드
+### 7.2 애매한 상황 처리
 
-### 8.1 Firebase 설정 및 연동
+1. 중복된 구현이 있는 경우 `src/` 폴더 내 파일을 우선시하라
+2. 타입 정의가 충돌하는 경우 `src/types/index.ts`의 정의를 우선시하라
+3. 스타일 관련 결정은 기존 Mac OS 스타일을 최대한 모방하는 방향으로 결정하라
+4. 인증 관련 로직 수정 시 기존의 철저한 로그아웃 처리 방식을 유지하라
 
-1. Firebase 프로젝트 설정 파일 생성
-2. 인증 서비스 구현
-3. Firestore 데이터 모델 및 액세스 함수 구현
+### 7.3 금지된 행동
 
-### 8.2 컴포넌트 개발 흐름
+- 하드코딩된 Firebase 키 사용 금지
+- 중복된 타입 정의 작성 금지
+- 여러 역할을 수행하는 복잡한 컴포넌트 작성 금지
+- 직접적인 DOM 조작 금지 (React 패러다임 준수)
+- 루트 디렉토리의 파일 수정 금지 (src/ 내부 파일만 수정)
 
-1. 데이터 모델 및 인터페이스 정의 (`types.ts`)
-2. 서비스 계층 구현 (`services/`)
-3. 상태 관리 훅 개발 (`hooks/`)
-4. UI 컴포넌트 구현 (`components/`)
+## 8. 테스트 및 배포
 
-### 8.3 기능 구현 우선순위
+### 8.1 테스트 방법
 
-1. Firebase 인증 (구글 로그인, 익명 로그인)
-2. 게시물 CRUD 기능
-3. 마크다운 지원 및 프리뷰
-4. 북마크 시스템
-5. 반응형 최적화
-6. 바탕화면 이미지 설정
+- 기능 구현 후 로컬에서 반드시 동작 테스트를 수행하라
+- 인증 관련 기능 변경 시 로그인/로그아웃 전체 흐름을 테스트하라
+- 브라우저 콘솔에 에러가 없는지 확인하라
+- 다양한 화면 크기에서 반응형 디자인이 정상 작동하는지 확인하라
 
-## 9. AI 에이전트 의사결정 기준
+### 8.2 배포 프로세스
 
-### 9.1 모호한 상황에서의 판단
-
-1. 기존 코드 패턴 및 구조를 최우선으로 따름
-2. PRD 문서에 명시된 요구사항 준수
-3. 사용자 경험을 해치지 않는 방향으로 결정
-4. 확장성과 유지보수성 고려
-
-### 9.2 기능 추가 판단 기준
-
-- **필수 구현**: PRD에 명시된 모든 기능
-- **권장 구현**: 사용자 경험 향상을 위한 기능 (로딩 상태, 에러 처리 등)
-- **선택 구현**: 추가적인 개선 사항 (애니메이션, 테마 등)
-
-## 10. 금지 사항
-
-### 10.1 안티패턴
-
-- ❌ 컴포넌트 내에서 직접 Firebase 호출
-- ❌ 인라인 스타일 사용 (대신 Tailwind 클래스 사용)
-- ❌ any 타입 사용 (명확한 타입 정의 필수)
-- ❌ 중복 상태 관리 (props 드릴링 대신 컨텍스트 사용)
-
-### 10.2 예시: 잘못된 구현
-
-```tsx
-// ❌ 잘못된 예: 컴포넌트 내 직접 Firebase 호출
-const PostList = () => {
-  const [posts, setPosts] = useState([]);
-  
-  useEffect(() => {
-    // 직접 Firebase 호출 - 금지!
-    const fetchData = async () => {
-      const snapshot = await getDocs(collection(db, 'posts'));
-      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    };
-    fetchData();
-  }, []);
-  
-  return (/* ... */);
-};
-```
-
-### 10.3 예시: 올바른 구현
-
-```tsx
-// ✅ 올바른 예: 서비스 함수 사용
-import { fetchPosts } from '../services/firebase/firestore';
-
-const PostList = () => {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchPosts();
-        setPosts(data);
-      } catch (err) {
-        console.error('게시물 로딩 오류:', err);
-        setError('게시물을 불러오는 중 오류가 발생했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadPosts();
-  }, []);
-  
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} />;
-  
-  return (/* ... */);
-};
-``` 
+- `npm run build` 명령으로 프로덕션 빌드를 생성하라
+- Firebase Hosting에 배포 시 환경변수가 올바르게 설정되었는지 확인하라
+- 배포 후 주요 기능이 정상 작동하는지 최종 확인하라 
