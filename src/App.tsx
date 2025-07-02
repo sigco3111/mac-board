@@ -64,10 +64,11 @@ const App: React.FC = () => {
 
   /**
    * 게시판 열기 핸들러
+   * 이 함수는 Desktop 컴포넌트 내부에서 처리하므로 여기서는 로그만 출력합니다.
    */
   const handleOpenBoard = () => {
-    // 게시판 열기 로직
-    console.log('게시판 열기');
+    // 게시판 열기 로직은 Desktop 컴포넌트에서 처리
+    console.log('App: 게시판 열기 요청 받음');
   };
 
   /**

@@ -43,6 +43,9 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
    * 게시판 열기 핸들러
    */
   function handleOpenBoard() {
+    // 이미 게시판이 열려있으면 다시 열지 않음
+    if (isBoardOpen) return;
+    
     setIsBoardOpen(true);
     onOpenBoard();
   }
@@ -124,9 +127,7 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
       
       {/* 게시판 앱 창 */}
       {isBoardOpen && (
-        <div className="absolute inset-8 bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col border border-gray-300">
-          <BulletinBoard onClose={handleCloseBoard} user={user} />
-        </div>
+        <BulletinBoard onClose={handleCloseBoard} user={user} />
       )}
     </div>
   );

@@ -52,8 +52,8 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
     { 
       name: '이동', 
       items: [
-        { label: '데브캔버스', action: () => window.open('https://dev-canvas-pi.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
-        { label: 'AI 테크 허브', action: () => window.open('https://tech-toolkit-hub.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false }
+        { label: 'AI 테크 허브', action: () => window.open('https://tech-toolkit-hub.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '데브캔버스', action: () => window.open('https://dev-canvas-pi.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false }
       ] 
     },
     { 
