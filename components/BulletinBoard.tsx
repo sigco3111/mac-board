@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import type { Post, Category, Menu, MenuItem, User } from '../types';
+import type { UIPost, Category, Menu, MenuItem, User } from '../src/types';
 import Sidebar from './Sidebar';
 import PostList from './PostList';
 import PostDetail from './PostDetail';
@@ -8,53 +8,8 @@ import NewPostModal from './NewPostModal';
 import WindowMenuBar from './WindowMenuBar';
 import ConfirmationModal from './ConfirmationModal';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
-
-const initialPosts: Post[] = [
-  {
-    id: 1,
-    author: { name: '김민준', avatarUrl: 'https://picsum.photos/id/1005/48/48' },
-    category: 'tech',
-    title: '리액트 19 새로운 기능',
-    content: '<p>리액트 19가 드디어 출시되었습니다! 이번 업데이트에는 Automatic Batching, 새로운 Concurrent features, 그리고 Server Components 개선 사항이 포함되어 있습니다.</p><p>특히 <strong>useTransition</strong> 훅은 UI 끊김 없이 상태를 업데이트하는 데 큰 도움이 될 것입니다.</p>',
-    date: '3시간 전',
-    comments: 5,
-    isNew: true,
-    tags: ['리액트', '프론트엔드', '자바스크립트'],
-  },
-  {
-    id: 2,
-    author: { name: '이수진', avatarUrl: 'https://picsum.photos/id/1011/48/48' },
-    category: 'tech',
-    title: 'Tailwind CSS vs. Styled Components',
-    content: '<p>스타일링 방법에 대한 오랜 논쟁이죠. Tailwind CSS는 유틸리티-우선 접근 방식으로 빠르게 프로토타이핑할 수 있는 장점이 있고, Styled Components는 컴포넌트 레벨에서 스타일을 캡슐화하는 데 강력합니다. 여러분의 선택은 무엇인가요?</p>',
-    date: '1일 전',
-    comments: 12,
-    isNew: false,
-    tags: ['CSS', '프론트엔드', '스타일링'],
-  },
-   {
-    id: 3,
-    author: { name: '박서연', avatarUrl: 'https://picsum.photos/id/1027/48/48' },
-    category: 'general',
-    title: '주말에 가볼만한 곳 추천',
-    content: '<h2>서울 근교 나들이</h2><p>이번 주말, 날씨가 좋다면 양평 두물머리에 가보는 건 어떠세요? 강과 산이 어우러진 풍경이 정말 아름답습니다. 맛있는 핫도그도 놓치지 마세요!</p><ul><li>두물머리</li><li>세미원</li><li>양평 레일바이크</li></ul>',
-    date: '2일 전',
-    comments: 8,
-    isNew: false,
-    tags: ['여행', '주말', '나들이'],
-  },
-  {
-    id: 4,
-    author: { name: '최현우', avatarUrl: 'https://picsum.photos/id/10/48/48' },
-    category: 'tech',
-    title: 'Gemini API 사용 후기',
-    content: '<p>Google의 새로운 Gemini API를 사용해봤습니다. 텍스트 생성 능력뿐만 아니라 이미지 인식 능력도 뛰어나서 다양한 애플리케이션에 활용할 수 있을 것 같습니다. 특히 JSON 모드로 구조화된 데이터를 받아오는 기능이 인상적이었습니다.</p>',
-    date: '5일 전',
-    comments: 21,
-    isNew: false,
-    tags: ['AI', 'API', 'Gemini'],
-  },
-];
+import { usePosts } from '../src/hooks/usePosts';
+import { deletePost } from '../src/services/firebase/firestore';
 
 const categoriesData: Category[] = [
   { id: 'all', name: '모든 게시물', icon: <MessagesSquareIcon /> },
@@ -68,16 +23,43 @@ interface BulletinBoardProps {
 }
 
 const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [categories] = useState<Category[]>(categoriesData);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(posts[0] || null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [postToEdit, setPostToEdit] = useState<Post | null>(null);
+  const [postToEdit, setPostToEdit] = useState<UIPost | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
+
+  // Firebase에서 게시물 데이터 가져오기
+  const { 
+    posts, 
+    loading, 
+    error, 
+    refresh: refreshPosts 
+  } = usePosts({
+    category: selectedCategory === 'all' ? undefined : selectedCategory,
+    tag: selectedTag || undefined
+  });
+
+  // 선택된 게시물 상태 관리
+  const [selectedPost, setSelectedPost] = useState<UIPost | null>(null);
+
+  // 게시물 데이터가 로드되면 첫 번째 게시물을 선택
+  useEffect(() => {
+    if (posts.length > 0 && !selectedPost) {
+      setSelectedPost(posts[0]);
+    } else if (posts.length === 0) {
+      setSelectedPost(null);
+    } else if (selectedPost) {
+      // 현재 선택된 게시물이 있으면 해당 게시물이 목록에 있는지 확인
+      const currentPostStillExists = posts.some(p => p.id === selectedPost.id);
+      if (!currentPostStillExists && posts.length > 0) {
+        setSelectedPost(posts[0]);
+      }
+    }
+  }, [posts, selectedPost]);
 
   // Window management state
   const windowRef = useRef<HTMLDivElement>(null);
@@ -176,9 +158,8 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     };
   }, [isDragging, isResizing, startPosition, startResize, minSize]);
 
-  const handleSelectPost = useCallback((post: Post) => {
+  const handleSelectPost = useCallback((post: UIPost) => {
     setSelectedPost(post);
-    setPosts(prevPosts => prevPosts.map(p => p.id === post.id ? {...p, isNew: false} : p));
   }, []);
 
   const handleSelectCategory = useCallback((categoryId: string) => {
@@ -209,49 +190,35 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     }
   }, [selectedPost]);
 
-  const confirmDeletePost = useCallback(() => {
+  const confirmDeletePost = useCallback(async () => {
     if (!selectedPost) return;
-    setPosts(prev => {
-      const postIndex = prev.findIndex(p => p.id === selectedPost.id);
-      const newPosts = prev.filter(p => p.id !== selectedPost.id);
-      if (newPosts.length > 0) {
-        const nextPostIndex = Math.min(postIndex, newPosts.length - 1);
-        setSelectedPost(newPosts[nextPostIndex]);
-      } else {
-        setSelectedPost(null);
-      }
-      return newPosts;
-    });
-    setIsDeleteModalOpen(false);
-  }, [selectedPost]);
+    
+    try {
+      // Firebase에서 게시물 삭제
+      await deletePost(selectedPost.id);
+      
+      // 삭제 성공 후 게시물 목록 새로고침
+      refreshPosts();
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error('게시물 삭제 오류:', error);
+      alert('게시물 삭제 중 오류가 발생했습니다.');
+    }
+  }, [selectedPost, refreshPosts]);
 
   const handleMovePost = useCallback((categoryId: string) => {
-    if (!selectedPost) return;
-    setPosts(prev => prev.map(p => p.id === selectedPost.id ? { ...p, category: categoryId } : p));
-    setSelectedPost(prev => prev ? { ...prev, category: categoryId } : null);
-  }, [selectedPost]);
+    // 이 기능은 추후 구현 예정
+    console.log('게시물 이동 기능은 아직 구현되지 않았습니다:', categoryId);
+  }, []);
 
   const handleSavePost = useCallback((postData: { title: string; category: string; content: string; tags: string[] }) => {
-    if (postToEdit) { // Editing existing post
-      const updatedPost = { ...postToEdit, ...postData, date: '방금 수정됨' };
-      const updatedPosts = posts.map(p => p.id === postToEdit.id ? updatedPost : p);
-      setPosts(updatedPosts);
-      setSelectedPost(updatedPost);
-    } else { // Adding new post
-      const newPost: Post = {
-        id: Date.now(),
-        author: { name: user.name, avatarUrl: user.avatarUrl },
-        ...postData,
-        date: '방금 전',
-        comments: 0,
-        isNew: true,
-      };
-      const updatedPosts = [newPost, ...posts];
-      setPosts(updatedPosts);
-      handleSelectCategory(newPost.category);
-      handleSelectPost(newPost);
-    }
-  }, [postToEdit, posts, handleSelectPost, handleSelectCategory, user]);
+    // 이 기능은 추후 구현 예정
+    console.log('게시물 저장 기능은 아직 구현되지 않았습니다:', postData);
+    setIsModalOpen(false);
+    
+    // 게시물 목록 새로고침
+    refreshPosts();
+  }, [refreshPosts]);
   
   const allTags = useMemo(() => {
     const tagsSet = new Set<string>();
@@ -296,22 +263,36 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     ]);
   }, [selectedPost, categories, onClose, handleOpenEditModal, requestDeletePost, handleMovePost, handleOpenNewPost]);
   
+  // 검색 필터링 처리
   const filteredPosts = useMemo(() => {
-    let intermediatePosts: Post[];
-
-    if (selectedTag) {
-      intermediatePosts = posts.filter(post => post.tags?.includes(selectedTag));
-    } else if (selectedCategory === 'all') {
-      intermediatePosts = posts;
-    } else {
-      intermediatePosts = posts.filter(post => post.category === selectedCategory);
+    if (searchTerm.trim() === '') {
+      return posts;
     }
     
-    return intermediatePosts.filter(post => 
+    return posts.filter(post => 
       post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      post.author.name.toLowerCase().includes(searchTerm.toLowerCase())
+      post.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [posts, selectedCategory, selectedTag, searchTerm]);
+  }, [posts, searchTerm]);
+
+  // 로딩 및 에러 상태 처리
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white/80 backdrop-blur-xl">
+        <div className="text-center p-6 max-w-md">
+          <h2 className="text-xl font-medium text-red-600 mb-4">데이터 로드 오류</h2>
+          <p className="text-slate-700 mb-4">{error.message}</p>
+          <button 
+            onClick={refreshPosts}
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -350,14 +331,26 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
           selectedTag={selectedTag}
           onSelectTag={handleSelectTag}
         />
-        <PostList
-          posts={filteredPosts}
-          selectedPostId={selectedPost?.id || null}
-          onSelectPost={handleSelectPost}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-        />
-        <PostDetail post={selectedPost} onSelectTag={handleSelectTag} />
+        
+        {loading ? (
+          <div className="flex-grow flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-slate-600">데이터 로딩 중...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <PostList
+              posts={filteredPosts}
+              selectedPostId={selectedPost?.id || null}
+              onSelectPost={handleSelectPost}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+            />
+            <PostDetail post={selectedPost} onSelectTag={handleSelectTag} />
+          </>
+        )}
       </main>
       {isModalOpen && (
         <NewPostModal 

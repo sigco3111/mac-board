@@ -35,7 +35,7 @@ const App: React.FC = () => {
   // 로딩 화면
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-mac-light">
+      <div className="flex items-center justify-center h-screen" style={{ backgroundColor: '#fbfbfd' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mac-blue mx-auto mb-4"></div>
           <p className="text-mac-dark">로딩 중...</p>
@@ -47,7 +47,7 @@ const App: React.FC = () => {
   // 에러 화면
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-mac-light">
+      <div className="flex items-center justify-center h-screen" style={{ backgroundColor: '#fbfbfd' }}>
         <div className="text-center p-6 max-w-md bg-white rounded-lg shadow-mac-window">
           <h2 className="text-xl font-medium text-red-600 mb-4">오류가 발생했습니다</h2>
           <p className="text-mac-dark mb-4">{error}</p>

@@ -1,11 +1,9 @@
-
-
 import React from 'react';
-import type { Post } from '../types';
+import type { UIPost } from '../src/types';
 import { MessagesSquareIcon, HashtagIcon } from './icons';
 
 interface PostDetailProps {
-  post: Post | null;
+  post: UIPost | null;
   onSelectTag: (tag: string) => void;
 }
 
@@ -26,10 +24,18 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag }) => {
       <div className="p-6 border-b border-slate-200">
         <h1 className="text-2xl font-bold text-slate-900">{post.title}</h1>
         <div className="flex items-center space-x-3 mt-3 text-sm">
-          <img src={post.author.avatarUrl} alt={post.author.name} className="w-10 h-10 rounded-full" />
+          <img 
+            src={post.author.avatarUrl || `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNjY2MiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCI+PC9jaXJjbGU+PC9zdmc+`} 
+            alt={post.author.name} 
+            className="w-10 h-10 rounded-full"
+            onError={(e) => {
+              // 이미지 로드 실패 시 기본 이미지로 대체
+              (e.target as HTMLImageElement).src = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNjY2MiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCI+PC9jaXJjbGU+PC9zdmc+`;
+            }}
+          />
           <div>
             <p className="font-semibold text-slate-800">{post.author.name}</p>
-            <p className="text-slate-500">{post.date}</p>
+            <p className="text-slate-500">{new Date(post.date).toLocaleString()}</p>
           </div>
         </div>
       </div>

@@ -8,10 +8,10 @@ import {
   fetchPostsByCategory, 
   fetchPostsByTag 
 } from '../services/firebase/firestore';
-import type { Post } from '../types/index';
+import type { UIPost } from '../types/index';
 
 interface PostsState {
-  posts: Post[];
+  posts: UIPost[];
   loading: boolean;
   error: Error | null;
 }
@@ -23,6 +23,8 @@ interface UsePostsOptions {
 
 /**
  * 게시물 데이터를 관리하는 커스텀 훅
+ * @param options 게시물 조회 옵션 (카테고리, 태그 등)
+ * @returns 게시물 목록, 로딩 상태, 에러 상태 및 새로고침 함수
  */
 export const usePosts = (options: UsePostsOptions = {}): PostsState & { refresh: () => Promise<void> } => {
   const { category, tag } = options;
@@ -37,7 +39,7 @@ export const usePosts = (options: UsePostsOptions = {}): PostsState & { refresh:
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      let posts: Post[];
+      let posts: UIPost[];
       
       if (tag) {
         // 태그로 필터링
@@ -60,7 +62,7 @@ export const usePosts = (options: UsePostsOptions = {}): PostsState & { refresh:
       setState({
         posts: [],
         loading: false,
-        error: error as Error,
+        error: error instanceof Error ? error : new Error('게시물을 가져오는 중 오류가 발생했습니다.'),
       });
     }
   }, [category, tag]);

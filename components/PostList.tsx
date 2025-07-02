@@ -1,13 +1,12 @@
-
 import React from 'react';
-import type { Post } from '../types';
+import type { UIPost } from '../src/types';
 import PostItem from './PostItem';
 import { SearchIcon } from './icons';
 
 interface PostListProps {
-  posts: Post[];
-  selectedPostId: number | null;
-  onSelectPost: (post: Post) => void;
+  posts: UIPost[];
+  selectedPostId: string | null;
+  onSelectPost: (post: UIPost) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
 }
