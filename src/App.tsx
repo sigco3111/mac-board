@@ -7,13 +7,10 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import Desktop from '../components/Desktop';
 import LoginScreen from '../components/LoginScreen';
 import { useAuth } from './hooks/useAuth';
-import { signOut as firebaseSignOut } from 'firebase/auth';
-import { auth } from './services/firebase/config';
 import './index.css';
 
 // 로그아웃 상태를 저장하기 위한 로컬 스토리지 키
 const LOGOUT_FLAG_KEY = 'mac_board_force_logout';
-const AUTH_STATE_KEY = 'mac_board_auth_state';
 
 /**
  * 애플리케이션 루트 컴포넌트
@@ -74,7 +71,7 @@ const App: React.FC = () => {
   };
 
   /**
-   * 로그아웃 핸들러 - 철저한 정리를 수행하는 버전
+   * 로그아웃 핸들러
    */
   const handleLogout = async () => {
     console.log('App: 로그아웃 요청 받음');
@@ -83,50 +80,13 @@ const App: React.FC = () => {
     setForceLogout(true);
     setManualLoginUser(null);
     
-    // 로컬 스토리지에서 모든 인증 관련 데이터 삭제
-    try {
-      localStorage.setItem(LOGOUT_FLAG_KEY, 'true');
-      localStorage.removeItem(AUTH_STATE_KEY);
-      
-      // Firebase 관련 로컬 스토리지 키도 삭제 시도
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('firebase') || key.includes('auth'))) {
-          console.log(`삭제할 로컬 스토리지 키 발견: ${key}`);
-          localStorage.removeItem(key);
-        }
-      }
-    } catch (err) {
-      console.error('로컬 스토리지 삭제 오류:', err);
-    }
-    
-    // Firebase 로그아웃 시도
-    try {
-      console.log('App: Firebase 로그아웃 시도');
-      await firebaseSignOut(auth);
-      console.log('App: Firebase 로그아웃 성공');
-    } catch (err) {
-      console.error('App: Firebase 로그아웃 실패', err);
-    }
-    
-    // useAuth의 signOut 함수도 호출
+    // useAuth의 signOut 함수 호출
     try {
       console.log('App: useAuth의 signOut 함수 호출');
       await signOut();
+      console.log('App: 로그아웃 완료, 강제 로그아웃 상태 설정됨');
     } catch (err) {
-      console.error('App: useAuth 로그아웃 실패', err);
-    }
-    
-    console.log('App: 로그아웃 완료, 강제 로그아웃 상태 설정됨');
-    
-    // 쿠키 삭제 시도
-    try {
-      document.cookie.split(";").forEach(function(c) {
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-      });
-      console.log('쿠키 삭제 시도 완료');
-    } catch (err) {
-      console.error('쿠키 삭제 오류:', err);
+      console.error('App: 로그아웃 실패', err);
     }
     
     // Promise를 반환
