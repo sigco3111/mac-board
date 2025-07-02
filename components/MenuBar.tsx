@@ -36,9 +36,16 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
   
   const handleMenuAction = (action?: (() => void) | undefined) => {
     if (action) {
+      console.log('MenuBar: 메뉴 액션 호출됨');
       action();
     }
     setActiveMenu(null);
+  };
+
+  // 로그아웃 핸들러 직접 래핑
+  const handleLogout = () => {
+    console.log('MenuBar: 로그아웃 함수 호출됨');
+    onLogout();
   };
 
   const menuItems = [
@@ -58,7 +65,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
   const appleMenuItems = [
     { label: '이 Mac에 관하여', action: () => {}, disabled: true },
     { isSeparator: true },
-    { label: '로그아웃...', action: onLogout, disabled: false }
+    { label: '로그아웃...', action: handleLogout, disabled: false }
   ];
 
   return (
@@ -112,7 +119,13 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
         ))}
       </div>
       <div className="flex items-center space-x-4">
-        <span className="font-medium">{user.name}</span>
+        <span className="font-medium">{user.displayName}</span>
+        <button 
+          onClick={handleLogout} 
+          className="bg-red-500/20 hover:bg-red-500/40 text-white rounded px-2 py-0.5"
+        >
+          로그아웃
+        </button>
         <BatteryIcon className="w-5 h-5"/>
         <WifiIcon className="w-4 h-4" />
         <SearchIcon className="w-4 h-4" />
