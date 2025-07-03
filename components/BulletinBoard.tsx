@@ -7,6 +7,7 @@ import TrafficLights from './TrafficLights';
 import NewPostModal from './NewPostModal';
 import WindowMenuBar from './WindowMenuBar';
 import ConfirmationModal from './ConfirmationModal';
+import Toast from './Toast';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
 import { usePosts } from '../src/hooks/usePosts';
 import { deletePost, updatePost, createPost, movePost } from '../src/services/firebase/firestore';
@@ -31,6 +32,31 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState<UIPost | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
+  
+  // 토스트 메시지 상태 추가
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    visible: boolean;
+  }>({
+    message: '',
+    type: 'success',
+    visible: false
+  });
+
+  // 토스트 메시지 표시 함수
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({
+      message,
+      type,
+      visible: true
+    });
+  }, []);
+
+  // 토스트 메시지 닫기 함수
+  const closeToast = useCallback(() => {
+    setToast(prev => ({ ...prev, visible: false }));
+  }, []);
 
   // Firebase에서 게시물 데이터 가져오기
   const { 
@@ -193,24 +219,24 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     if (selectedPost) {
       // 작성자 확인
       if (!isPostOwner(selectedPost)) {
-        alert('자신이 작성한 게시물만 수정할 수 있습니다.');
+        showToast('자신이 작성한 게시물만 수정할 수 있습니다.', 'error');
         return;
       }
       setPostToEdit(selectedPost);
       setIsModalOpen(true);
     }
-  }, [selectedPost, isPostOwner]);
+  }, [selectedPost, isPostOwner, showToast]);
   
   const requestDeletePost = useCallback(() => {
     if (selectedPost) {
       // 작성자 확인
       if (!isPostOwner(selectedPost)) {
-        alert('자신이 작성한 게시물만 삭제할 수 있습니다.');
+        showToast('자신이 작성한 게시물만 삭제할 수 있습니다.', 'error');
         return;
       }
       setIsDeleteModalOpen(true);
     }
-  }, [selectedPost, isPostOwner]);
+  }, [selectedPost, isPostOwner, showToast]);
 
   const confirmDeletePost = useCallback(async () => {
     if (!selectedPost) return;
@@ -222,11 +248,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       // 삭제 성공 후 게시물 목록 새로고침
       refreshPosts();
       setIsDeleteModalOpen(false);
+      showToast('게시물이 성공적으로 삭제되었습니다.', 'success');
     } catch (error) {
       console.error('게시물 삭제 오류:', error);
-      alert('게시물 삭제 중 오류가 발생했습니다.');
+      showToast('게시물 삭제 중 오류가 발생했습니다.', 'error');
     }
-  }, [selectedPost, user.uid, refreshPosts]);
+  }, [selectedPost, user.uid, refreshPosts, showToast]);
 
   const handleMovePost = useCallback(async (categoryId: string) => {
     if (!selectedPost) return;
@@ -234,7 +261,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     try {
       // 이미 동일한 카테고리인 경우 처리
       if (selectedPost.category === categoryId) {
-        alert('이미 해당 카테고리에 속해 있는 게시물입니다.');
+        showToast('이미 해당 카테고리에 속해 있는 게시물입니다.', 'info');
         return;
       }
       
@@ -245,8 +272,8 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       // Firebase에서 게시물 이동 (id는 string 타입으로 확인됨)
       await movePost(selectedPost.id, categoryId, user.uid);
       
-      // 이동 성공 메시지
-      alert(`게시물이 "${categoryName}" 카테고리로 이동되었습니다.`);
+      // 이동 성공 메시지 (alert 대신 토스트 사용)
+      showToast(`게시물이 "${categoryName}" 카테고리로 이동되었습니다.`, 'success');
       
       // 이동된 게시물의 UI 정보 업데이트 (새로고침하기 전에 UI 반영)
       if (selectedPost) {
@@ -260,9 +287,9 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       refreshPosts();
     } catch (error) {
       console.error('게시물 이동 오류:', error);
-      alert('게시물 이동 중 오류가 발생했습니다.');
+      showToast('게시물 이동 중 오류가 발생했습니다.', 'error');
     }
-  }, [selectedPost, user.uid, refreshPosts, categories]);
+  }, [selectedPost, user.uid, refreshPosts, categories, showToast]);
 
   const handleSavePost = useCallback(async (postData: { title: string; category: string; content: string; tags: string[] }) => {
     try {
@@ -277,7 +304,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
           tags: postData.tags,
           // updatedAt은 updatePost 함수 내부에서 자동 설정
         }, user.uid);
-        console.log('게시물이 성공적으로 수정되었습니다.');
+        showToast('게시물이 성공적으로 수정되었습니다.', 'success');
       } else {
         // 새 게시물 작성
         const newPostId = await createPost({
@@ -291,7 +318,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
           authorId: user.uid,
           // createdAt과 updatedAt은 createPost 함수 내부에서 자동 설정
         });
-        console.log('새 게시물이 성공적으로 생성되었습니다. ID:', newPostId);
+        showToast('새 게시물이 성공적으로 생성되었습니다.', 'success');
       }
       
       // 모달 닫기
@@ -301,9 +328,9 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       refreshPosts();
     } catch (error) {
       console.error('게시물 저장 오류:', error);
-      alert('게시물 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      showToast('게시물 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'error');
     }
-  }, [postToEdit, user, refreshPosts]);
+  }, [postToEdit, user, refreshPosts, showToast]);
   
   const allTags = useMemo(() => {
     const tagsSet = new Set<string>();
@@ -499,6 +526,15 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
               <path d="M 12 10 L 10 12" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
       </div>
+      
+      {/* 토스트 메시지 추가 */}
+      {toast.visible && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={closeToast}
+        />
+      )}
     </div>
   );
 };
