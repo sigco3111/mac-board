@@ -31,11 +31,12 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
   const [isBoardOpen, setIsBoardOpen] = useState<boolean>(false);
+  const [showBookmarks, setShowBookmarks] = useState<boolean>(false);
 
   // 데스크톱 아이템 정의
   const desktopItems = [
     { id: 'bulletin-board', name: '게시판', Icon: FolderIcon, onOpen: handleOpenBoard, color: 'text-sky-400' },
-    { id: 'bookmark', name: '북마크', Icon: FolderIcon, onOpen: () => {}, color: 'text-sky-400' },
+    { id: 'bookmark', name: '북마크', Icon: FolderIcon, onOpen: handleOpenBookmarks, color: 'text-sky-400' },
     { id: 'settings', name: '설정', Icon: SettingsIcon, onOpen: () => {}, color: 'text-gray-500' },
   ];
   
@@ -46,6 +47,22 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
     // 이미 게시판이 열려있으면 다시 열지 않음
     if (isBoardOpen) return;
     
+    setShowBookmarks(false);
+    setIsBoardOpen(true);
+    onOpenBoard();
+  }
+
+  /**
+   * 북마크 게시판 열기 핸들러
+   */
+  function handleOpenBookmarks() {
+    // 이미 게시판이 열려있으면 다시 열지 않음
+    if (isBoardOpen) {
+      setShowBookmarks(true);
+      return;
+    }
+    
+    setShowBookmarks(true);
     setIsBoardOpen(true);
     onOpenBoard();
   }
@@ -127,7 +144,11 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
       
       {/* 게시판 앱 창 */}
       {isBoardOpen && (
-        <BulletinBoard onClose={handleCloseBoard} user={user} />
+        <BulletinBoard 
+          onClose={handleCloseBoard} 
+          user={user} 
+          initialShowBookmarks={showBookmarks} 
+        />
       )}
     </div>
   );

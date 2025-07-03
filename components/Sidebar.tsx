@@ -33,27 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="w-60 flex-shrink-0 bg-slate-100/80 p-3 flex flex-col h-full backdrop-blur-md border-r border-slate-200">
-      <div className="text-xs font-semibold text-slate-500 px-3 pt-4 pb-2">메뉴</div>
-      <nav>
-        <ul className="space-y-1">
-          {/* 북마크 메뉴 */}
-          {user && (
-            <li>
-              <button
-                onClick={onToggleBookmarks}
-                className={`w-full flex items-center space-x-3 text-sm font-medium p-2 rounded-md transition-colors duration-150 ${
-                  showBookmarks
-                    ? 'bg-blue-500 text-white shadow'
-                    : 'text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                <BookmarkIcon className={`w-4 h-4 flex-shrink-0 ${showBookmarks ? 'text-white' : 'text-slate-500'}`} fill={showBookmarks ? 'white' : 'none'} />
-                <span>북마크</span>
-              </button>
-            </li>
-          )}
-        </ul>
-      </nav>
+      {/* "메뉴" 섹션 제거 */}
 
       <div className="text-xs font-semibold text-slate-500 px-3 pt-4 pb-2">카테고리</div>
       <nav>

@@ -22,13 +22,14 @@ const categoriesData: Category[] = [
 interface BulletinBoardProps {
     onClose: () => void;
     user: User;
+    initialShowBookmarks?: boolean;
 }
 
-const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
+const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialShowBookmarks = false }) => {
   const [categories] = useState<Category[]>(categoriesData);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [showBookmarks, setShowBookmarks] = useState<boolean>(false);
+  const [showBookmarks, setShowBookmarks] = useState<boolean>(initialShowBookmarks);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -79,13 +80,38 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     tag: selectedTag || undefined
   });
 
+  // 초기 북마크 설정
+  useEffect(() => {
+    if (initialShowBookmarks) {
+      setShowBookmarks(true);
+      setSelectedCategory('all');
+      setSelectedTag(null);
+      refreshBookmarks();
+    }
+  }, [initialShowBookmarks, refreshBookmarks]);
+
   // 표시할 게시물 결정
   const posts = useMemo(() => {
+    let result;
+    
     if (showBookmarks) {
-      return bookmarkedPosts;
+      result = bookmarkedPosts;
+      
+      // 북마크 모드에서 카테고리 필터링
+      if (selectedCategory !== 'all') {
+        result = result.filter(post => post.category === selectedCategory);
+      }
+      
+      // 북마크 모드에서 태그 필터링
+      if (selectedTag) {
+        result = result.filter(post => post.tags && post.tags.includes(selectedTag));
+      }
+    } else {
+      result = fetchedPosts;
     }
-    return fetchedPosts;
-  }, [showBookmarks, bookmarkedPosts, fetchedPosts]);
+    
+    return result;
+  }, [showBookmarks, bookmarkedPosts, fetchedPosts, selectedCategory, selectedTag]);
 
   // 로딩 및 에러 상태 통합
   const loading = showBookmarks ? bookmarkLoading : postsLoading;
@@ -108,6 +134,20 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       }
     }
   }, [posts, selectedPost]);
+
+  // 윈도우 타이틀 업데이트
+  useEffect(() => {
+    // 북마크 모드인 경우 타이틀 변경
+    if (showBookmarks) {
+      document.title = "북마크 - Mac Board";
+    } else {
+      document.title = "게시판 - Mac Board";
+    }
+    
+    return () => {
+      document.title = "Mac Board";
+    };
+  }, [showBookmarks]);
 
   // Window management state
   const windowRef = useRef<HTMLDivElement>(null);
@@ -156,6 +196,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     }
   }, [showBookmarks, refreshBookmarks, refreshPosts]);
 
+  // 창 최대화 처리
   const handleToggleMaximize = useCallback(() => {
     const MENU_BAR_HEIGHT = 28; // Corresponds to h-7 in TailwindCSS
     if (isMaximized) {
@@ -173,6 +214,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     }
   }, [isMaximized, preMaximizeState, size, position]);
 
+  // 창 최소화 처리
   const handleMinimize = useCallback(() => {
     if (isMaximized) {
       if (preMaximizeState) {
@@ -184,6 +226,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     }
   }, [isMaximized, preMaximizeState]);
   
+  // 창 드래그 시작 처리
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLElement>) => {
     if (isMaximized || (e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('[data-menu-bar]')) {
       return;
@@ -193,6 +236,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     setStartPosition({ x: position.x, y: position.y, mouseX: e.clientX, mouseY: e.clientY });
   }, [isMaximized, position]);
 
+  // 창 크기 조절 시작 처리
   const handleResizeStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isMaximized) {
         return;
@@ -203,6 +247,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     setStartResize({ width: size.width, height: size.height, mouseX: e.clientX, mouseY: e.clientY });
   }, [isMaximized, size]);
 
+  // 마우스 이동 및 마우스 업 이벤트 처리
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
@@ -230,27 +275,53 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     };
   }, [isDragging, isResizing, startPosition, startResize, minSize]);
 
+  // 표시할 게시물 결정 (필터링 적용)
+  const filteredPosts = useMemo(() => {
+    // 검색어 필터링
+    let result = posts;
+    if (searchTerm.trim() !== '') {
+      result = result.filter(post => 
+        post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        post.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return result;
+  }, [posts, searchTerm]);
+
+  // 게시물 선택 처리
   const handleSelectPost = useCallback((post: UIPost) => {
     setSelectedPost(post);
   }, []);
 
+  // 북마크 모드에서 카테고리 선택 처리
   const handleSelectCategory = useCallback((categoryId: string) => {
     setSelectedCategory(categoryId);
-    setSelectedTag(null); // Clear tag selection when category is selected
-    setShowBookmarks(false); // 북마크 모드 해제
+    setSelectedTag(null); // 태그 선택 초기화
+    
+    // 북마크 모드가 아닐 때만 북마크 모드 해제
+    if (!showBookmarks) {
+      setShowBookmarks(false);
+    }
     
     // 카테고리 변경 시 선택된 게시물 초기화
     setSelectedPost(null);
-  }, []);
+  }, [showBookmarks]);
 
+  // 북마크 모드에서 태그 선택 처리
   const handleSelectTag = useCallback((tag: string | null) => {
     setSelectedTag(tag); // 태그 선택 또는 해제
-    setSelectedCategory('all'); // 카테고리 선택 초기화
-    setShowBookmarks(false); // 북마크 모드 해제
+    
+    // 북마크 모드가 아닐 때만 카테고리를 all로 설정하고 북마크 모드 해제
+    if (!showBookmarks) {
+      setSelectedCategory('all');
+      setShowBookmarks(false);
+    }
     
     // 태그 변경 시 선택된 게시물 초기화
     setSelectedPost(null);
-  }, []);
+  }, [showBookmarks]);
 
   const handleOpenNewPost = useCallback(() => {
     setPostToEdit(null);
@@ -324,12 +395,10 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       showToast(`게시물이 "${categoryName}" 카테고리로 이동되었습니다.`, 'success');
       
       // 이동된 게시물의 UI 정보 업데이트 (새로고침하기 전에 UI 반영)
-      if (selectedPost) {
-        setSelectedPost({
-          ...selectedPost,
-          category: categoryId,
-        });
-      }
+      setSelectedPost({
+        ...selectedPost,
+        category: categoryId,
+      });
       
       // 게시물 목록 새로고침
       refreshPostData();
@@ -381,19 +450,6 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
   }, [postToEdit, user, refreshPostData, showToast]);
   
   // 검색 필터링 처리
-  const filteredPosts = useMemo(() => {
-    if (searchTerm.trim() === '') {
-      return posts;
-    }
-    
-    return posts.filter(post => 
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      post.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [posts, searchTerm]);
-
-  // 모든 태그 수집
   const allTags = useMemo(() => {
     const tagsSet = new Set<string>();
     posts.forEach(post => {
@@ -479,7 +535,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       >
         <TrafficLights onClose={onClose} onMinimize={handleMinimize} onMaximize={handleToggleMaximize} />
         <div className="flex-grow text-center">
-           <h1 className="font-semibold text-slate-700 select-none">게시판</h1>
+           <h1 className="font-semibold text-slate-700 select-none">{showBookmarks ? "북마크" : "게시판"}</h1>
         </div>
         <div className="w-16"></div>
       </header>
