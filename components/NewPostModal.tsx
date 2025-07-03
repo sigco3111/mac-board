@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { Category, Post } from '../types';
+import MDEditor from '@uiw/react-md-editor';
+import '@uiw/react-md-editor/markdown-editor.css';
+import '@uiw/react-markdown-preview/markdown.css';
 
 interface NewPostModalProps {
   categories: Category[];
@@ -13,6 +16,7 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(categories[0]?.id || '');
   const [content, setContent] = useState('');
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
   
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [allVisibleTags, setAllVisibleTags] = useState<string[]>([]);
@@ -34,6 +38,23 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
       setSelectedTags([]);
     }
   }, [postToEdit, isEditing, categories]);
+
+  // 시스템 다크 모드 감지
+  useEffect(() => {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setColorMode(isDarkMode ? 'dark' : 'light');
+
+    // 시스템 다크 모드 변경 감지 이벤트 리스너
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setColorMode(e.matches ? 'dark' : 'light');
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     // Combine passed `allTags` with the currently `selectedTags` to form the list of all visible tags
@@ -167,15 +188,19 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
 
             <div>
               <label htmlFor="content" className="block text-sm font-medium text-slate-700 mb-1">내용</label>
-              <textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={10}
-                className="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="내용을 입력하세요..."
-                required
-              />
+              <div data-color-mode={colorMode} className="w-full">
+                <MDEditor
+                  id="content"
+                  value={content}
+                  onChange={(value) => setContent(value || '')}
+                  height={300}
+                  preview="edit"
+                  className="w-full"
+                />
+                <div className="mt-1 text-xs text-slate-500">
+                  마크다운 문법을 사용하여 글을 작성할 수 있습니다.
+                </div>
+              </div>
             </div>
           </div>
           <div className="bg-slate-50 px-6 py-4 flex justify-end space-x-3 rounded-b-xl">
