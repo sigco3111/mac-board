@@ -8,7 +8,6 @@ export interface Post {
   category: string;       // 게시물 카테고리 ('general', 'tech' 등)
   author: {               // 작성자 정보
     name: string;         // 작성자 이름
-    avatarUrl: string;    // 작성자 프로필 이미지 URL
   };
   authorId: string;       // 작성자 고유 ID (사용자 인증 시스템과 연동)
   tags: string[];         // 게시물 태그 목록
@@ -25,8 +24,8 @@ export interface UIPost {
   id: string;
   author: {
     name: string;
-    avatarUrl: string;
   };
+  authorId: string;
   category: string;
   title: string;
   content: string;

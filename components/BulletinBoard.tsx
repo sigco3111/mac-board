@@ -165,11 +165,17 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
   const handleSelectCategory = useCallback((categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedTag(null); // Clear tag selection when category is selected
+    
+    // 카테고리 변경 시 선택된 게시물 초기화
+    setSelectedPost(null);
   }, []);
 
-  const handleSelectTag = useCallback((tag: string) => {
-    setSelectedTag(prev => (prev === tag ? null : tag)); // Toggle selection
-    setSelectedCategory('all'); // Clear category selection
+  const handleSelectTag = useCallback((tag: string | null) => {
+    setSelectedTag(tag); // 태그 선택 또는 해제
+    setSelectedCategory('all'); // 카테고리 선택 초기화
+    
+    // 태그 변경 시 선택된 게시물 초기화
+    setSelectedPost(null);
   }, []);
 
   const handleOpenNewPost = useCallback(() => {

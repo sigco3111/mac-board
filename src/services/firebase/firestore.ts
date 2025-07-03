@@ -58,7 +58,6 @@ const mapDocToPost = (doc: QueryDocumentSnapshot<DocumentData>): Post => {
     category: data.category || 'general',
     author: {
       name: data.author?.name || '알 수 없음',
-      avatarUrl: data.author?.avatarUrl || '',
     },
     authorId: data.authorId || '',
     tags: data.tags || [],
@@ -84,6 +83,7 @@ export const convertToUIPost = (post: Post): UIPost => {
     content: post.content,
     category: post.category,
     author: post.author,
+    authorId: post.authorId,
     date: post.createdAt.toDate().toISOString(),
     comments: post.commentCount,
     isNew: post.isNew || false,
@@ -132,6 +132,11 @@ export const fetchPosts = async (): Promise<UIPost[]> => {
 export const fetchPostsByCategory = async (category: string): Promise<UIPost[]> => {
   let attempts = 0;
   
+  // 카테고리가 유효하지 않은 경우 모든 게시물 반환
+  if (!category || category === 'all') {
+    return fetchPosts();
+  }
+  
   while (attempts < MAX_RETRY_COUNT) {
     try {
       attempts++;
@@ -146,8 +151,19 @@ export const fetchPostsByCategory = async (category: string): Promise<UIPost[]> 
       const posts = querySnapshot.docs.map(mapDocToPost);
       
       return posts.map(convertToUIPost);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`${category} 카테고리 게시물 조회 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
+      
+      // Firebase 인덱스 오류 처리
+      if (error.code === 'failed-precondition' || error.message?.includes('requires an index')) {
+        const indexUrl = error.message?.match(/https:\/\/console\.firebase\.google\.com[^\s"]*/)?.[0];
+        const indexMessage = indexUrl 
+          ? `Firebase 복합 인덱스가 필요합니다. 다음 링크에서 인덱스를 생성해주세요: ${indexUrl}`
+          : 'Firebase 복합 인덱스가 필요합니다. Firebase 콘솔에서 인덱스를 생성해주세요.';
+        
+        console.error(indexMessage);
+        throw new Error(`${category} 카테고리 조회를 위한 ${indexMessage}`);
+      }
       
       if (attempts >= MAX_RETRY_COUNT) {
         throw new Error(`${category} 카테고리 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
@@ -180,8 +196,19 @@ export const fetchPostsByTag = async (tag: string): Promise<UIPost[]> => {
       const posts = querySnapshot.docs.map(mapDocToPost);
       
       return posts.map(convertToUIPost);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`${tag} 태그 게시물 조회 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
+      
+      // Firebase 인덱스 오류 처리
+      if (error.code === 'failed-precondition' || error.message?.includes('requires an index')) {
+        const indexUrl = error.message?.match(/https:\/\/console\.firebase\.google\.com[^\s"]*/)?.[0];
+        const indexMessage = indexUrl 
+          ? `Firebase 복합 인덱스가 필요합니다. 다음 링크에서 인덱스를 생성해주세요: ${indexUrl}`
+          : 'Firebase 복합 인덱스가 필요합니다. Firebase 콘솔에서 인덱스를 생성해주세요.';
+        
+        console.error(indexMessage);
+        throw new Error(`${tag} 태그 조회를 위한 ${indexMessage}`);
+      }
       
       if (attempts >= MAX_RETRY_COUNT) {
         throw new Error(`${tag} 태그 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
