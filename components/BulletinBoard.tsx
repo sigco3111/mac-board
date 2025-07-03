@@ -183,25 +183,41 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     setIsModalOpen(true);
   },[]);
   
+  // 게시물 작성자 확인 함수 추가
+  const isPostOwner = useCallback((post: UIPost | null) => {
+    if (!post || !user) return false;
+    return post.authorId === user.uid;
+  }, [user]);
+
   const handleOpenEditModal = useCallback(() => {
     if (selectedPost) {
+      // 작성자 확인
+      if (!isPostOwner(selectedPost)) {
+        alert('자신이 작성한 게시물만 수정할 수 있습니다.');
+        return;
+      }
       setPostToEdit(selectedPost);
       setIsModalOpen(true);
     }
-  }, [selectedPost]);
+  }, [selectedPost, isPostOwner]);
   
   const requestDeletePost = useCallback(() => {
     if (selectedPost) {
+      // 작성자 확인
+      if (!isPostOwner(selectedPost)) {
+        alert('자신이 작성한 게시물만 삭제할 수 있습니다.');
+        return;
+      }
       setIsDeleteModalOpen(true);
     }
-  }, [selectedPost]);
+  }, [selectedPost, isPostOwner]);
 
   const confirmDeletePost = useCallback(async () => {
     if (!selectedPost) return;
     
     try {
       // Firebase에서 게시물 삭제
-      await deletePost(selectedPost.id);
+      await deletePost(selectedPost.id, user.uid);
       
       // 삭제 성공 후 게시물 목록 새로고침
       refreshPosts();
@@ -210,7 +226,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       console.error('게시물 삭제 오류:', error);
       alert('게시물 삭제 중 오류가 발생했습니다.');
     }
-  }, [selectedPost, refreshPosts]);
+  }, [selectedPost, user.uid, refreshPosts]);
 
   const handleMovePost = useCallback((categoryId: string) => {
     // 이 기능은 추후 구현 예정
@@ -229,7 +245,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
           content: postData.content,
           tags: postData.tags,
           // updatedAt은 updatePost 함수 내부에서 자동 설정
-        });
+        }, user.uid);
         console.log('게시물이 성공적으로 수정되었습니다.');
       } else {
         // 새 게시물 작성
@@ -268,6 +284,9 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
 
   useEffect(() => {
     const isPostSelected = selectedPost !== null;
+    // 권한 확인: 현재 사용자가 게시물 작성자인지 확인
+    const canEditOrDelete = isPostSelected && isPostOwner(selectedPost);
+    
     const moveSubMenu: MenuItem[] = categories
       .filter(c => c.id !== 'all' && c.id !== selectedPost?.category)
       .map(c => ({
@@ -288,18 +307,26 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       {
         name: '편집',
         items: [
-          { label: '수정...', action: handleOpenEditModal, disabled: !isPostSelected },
-          { label: '삭제', action: requestDeletePost, disabled: !isPostSelected },
+          { 
+            label: '수정...', 
+            action: handleOpenEditModal, 
+            disabled: !isPostSelected || !canEditOrDelete 
+          },
+          { 
+            label: '삭제', 
+            action: requestDeletePost, 
+            disabled: !isPostSelected || !canEditOrDelete 
+          },
           { isSeparator: true },
           { 
             label: '게시물 이동', 
-            disabled: !isPostSelected || moveSubMenu.length === 0,
+            disabled: !isPostSelected || !canEditOrDelete || moveSubMenu.length === 0,
             items: moveSubMenu 
           },
         ]
       }
     ]);
-  }, [selectedPost, categories, onClose, handleOpenEditModal, requestDeletePost, handleMovePost, handleOpenNewPost]);
+  }, [selectedPost, categories, onClose, handleOpenEditModal, requestDeletePost, handleMovePost, handleOpenNewPost, isPostOwner]);
   
   // 검색 필터링 처리
   const filteredPosts = useMemo(() => {
@@ -386,7 +413,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
             />
-            <PostDetail post={selectedPost} onSelectTag={handleSelectTag} />
+            <PostDetail 
+              post={selectedPost} 
+              onSelectTag={handleSelectTag} 
+              onEditPost={handleOpenEditModal}
+              onDeletePost={requestDeletePost}
+            />
           </>
         )}
       </main>

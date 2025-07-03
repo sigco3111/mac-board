@@ -288,10 +288,28 @@ export const createPost = async (postData: Partial<Post>): Promise<string> => {
 
 /**
  * 게시물을 수정하는 함수
+ * @param postId 수정할 게시물 ID
+ * @param postData 수정할 게시물 데이터
+ * @param userId 현재 로그인한 사용자 ID
+ * @returns 수정 완료 Promise
  */
-export const updatePost = async (postId: string, postData: Partial<Post> | Partial<UIPost>): Promise<void> => {
+export const updatePost = async (postId: string, postData: Partial<Post> | Partial<UIPost>, userId?: string): Promise<void> => {
   try {
     const docRef = doc(db, POSTS_COLLECTION, postId);
+    
+    // 작성자 권한 확인 (userId가 제공된 경우에만)
+    if (userId) {
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('게시물을 찾을 수 없습니다.');
+      }
+      
+      const postAuthorId = docSnap.data().authorId;
+      if (postAuthorId !== userId) {
+        throw new Error('자신이 작성한 게시물만 수정할 수 있습니다.');
+      }
+    }
+    
     const updateData: Record<string, any> = { ...postData };
     
     // updatedAt은 항상 현재 시간으로 설정
@@ -315,19 +333,36 @@ export const updatePost = async (postId: string, postData: Partial<Post> | Parti
     await updateDoc(docRef, updateData);
   } catch (error) {
     console.error('게시물 수정 오류:', error);
-    throw new Error('게시물을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    throw new Error(error instanceof Error ? error.message : '게시물을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.');
   }
 };
 
 /**
  * 게시물을 삭제하는 함수
+ * @param postId 삭제할 게시물 ID
+ * @param userId 현재 로그인한 사용자 ID
+ * @returns 삭제 완료 Promise
  */
-export const deletePost = async (postId: string): Promise<void> => {
+export const deletePost = async (postId: string, userId?: string): Promise<void> => {
   try {
     const docRef = doc(db, POSTS_COLLECTION, postId);
+    
+    // 작성자 권한 확인 (userId가 제공된 경우에만)
+    if (userId) {
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('게시물을 찾을 수 없습니다.');
+      }
+      
+      const postAuthorId = docSnap.data().authorId;
+      if (postAuthorId !== userId) {
+        throw new Error('자신이 작성한 게시물만 삭제할 수 있습니다.');
+      }
+    }
+    
     await deleteDoc(docRef);
   } catch (error) {
     console.error('게시물 삭제 오류:', error);
-    throw new Error('게시물을 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    throw new Error(error instanceof Error ? error.message : '게시물을 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.');
   }
 }; 

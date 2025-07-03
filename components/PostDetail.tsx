@@ -1,19 +1,24 @@
 import React from 'react';
 import type { UIPost } from '../src/types';
-import { MessagesSquareIcon, HashtagIcon } from './icons';
+import { MessagesSquareIcon, HashtagIcon, PencilIcon, TrashIcon } from './icons';
 import { useAuth } from '../src/hooks/useAuth';
 
 interface PostDetailProps {
   post: UIPost | null;
   onSelectTag: (tag: string | null) => void;
+  onEditPost?: () => void;
+  onDeletePost?: () => void;
 }
 
-const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag }) => {
+const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag, onEditPost, onDeletePost }) => {
   // 인증 정보 가져오기
   const { user } = useAuth();
   
   // 기본 프로필 이미지
   const defaultAvatar = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNjY2MiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCI+PC9jaXJjbGU+PC9zdmc+`;
+
+  // 현재 사용자가 게시물 작성자인지 확인
+  const isAuthor = user && post && user.uid === post.authorId;
 
   if (!post) {
     return (
@@ -34,7 +39,30 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag }) => {
   return (
     <div className="flex-grow bg-slate-50 flex flex-col h-full">
       <div className="p-6 border-b border-slate-200">
-        <h1 className="text-2xl font-bold text-slate-900">{post.title}</h1>
+        <div className="flex justify-between items-start">
+          <h1 className="text-2xl font-bold text-slate-900">{post.title}</h1>
+          
+          {/* 작성자에게만 보이는 수정/삭제 버튼 */}
+          {isAuthor && onEditPost && onDeletePost && (
+            <div className="flex space-x-2">
+              <button 
+                onClick={onEditPost}
+                className="p-1.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
+                title="게시물 수정"
+              >
+                <PencilIcon className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={onDeletePost}
+                className="p-1.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
+                title="게시물 삭제"
+              >
+                <TrashIcon className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+        
         <div className="flex items-center space-x-3 mt-3 text-sm">
           <img 
             src={avatarUrl} 
