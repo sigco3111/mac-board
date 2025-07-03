@@ -1,6 +1,7 @@
 import React from 'react';
 import type { UIPost } from '../src/types';
 import { useAuth } from '../src/hooks/useAuth';
+import { MessagesSquareIcon } from './icons';
 
 interface PostItemProps {
   post: UIPost;
@@ -44,8 +45,18 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
           </div>
         </div>
         <div className="flex flex-col items-end flex-shrink-0 ml-4">
-            <span className="text-xs text-slate-500">{new Date(post.date).toLocaleDateString()}</span>
-            {post.isNew && <span className="mt-2 w-3 h-3 bg-blue-500 rounded-full"></span>}
+          <div className="flex items-center text-xs text-slate-500">
+            {post.comments > 0 && (
+              <div className="flex items-center text-slate-600 mr-3">
+                <MessagesSquareIcon className="w-3.5 h-3.5 mr-1" />
+                <span>{post.comments}</span>
+              </div>
+            )}
+            <span>{new Date(post.date).toLocaleDateString()}</span>
+          </div>
+          <div className="flex items-center mt-2">
+            {post.isNew && <span className="w-3 h-3 bg-blue-500 rounded-full"></span>}
+          </div>
         </div>
       </div>
     </li>

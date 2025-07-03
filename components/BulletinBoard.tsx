@@ -92,7 +92,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const minSize = { width: 720, height: 500 };
-  const [size, setSize] = useState({ width: 1178, height: 805 });
+  const [size, setSize] = useState({ width: 1178, height: 845 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0, mouseX: 0, mouseY: 0 });
   const [startResize, setStartResize] = useState({ width: 0, height: 0, mouseX: 0, mouseY: 0 });

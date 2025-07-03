@@ -5,6 +5,7 @@ import { useAuth } from '../src/hooks/useAuth';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import CommentSection from './CommentSection';
 
 interface PostDetailProps {
   post: UIPost | null;
@@ -40,30 +41,41 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag, onEditPost, 
     : defaultAvatar;
 
   return (
-    <div className="flex-grow bg-slate-50 flex flex-col h-full">
+    <div className="flex-grow bg-slate-50 flex flex-col h-full overflow-hidden">
       <div className="p-6 border-b border-slate-200">
         <div className="flex justify-between items-start">
-          <h1 className="text-2xl font-bold text-slate-900">{post.title}</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">{post.title}</h1>
+          </div>
           
-          {/* 작성자에게만 보이는 수정/삭제 버튼 */}
-          {isAuthor && onEditPost && onDeletePost && (
-            <div className="flex space-x-2">
-              <button 
-                onClick={onEditPost}
-                className="p-1.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
-                title="게시물 수정"
-              >
-                <PencilIcon className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={onDeletePost}
-                className="p-1.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
-                title="게시물 삭제"
-              >
-                <TrashIcon className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+          <div className="flex items-center">
+            {post.comments > 0 && (
+              <div className="flex items-center mr-4 text-slate-600">
+                <MessagesSquareIcon className="w-4 h-4 mr-1" />
+                <span className="text-sm">{post.comments}개의 댓글</span>
+              </div>
+            )}
+            
+            {/* 작성자에게만 보이는 수정/삭제 버튼 */}
+            {isAuthor && onEditPost && onDeletePost && (
+              <div className="flex space-x-2">
+                <button 
+                  onClick={onEditPost}
+                  className="p-1.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
+                  title="게시물 수정"
+                >
+                  <PencilIcon className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={onDeletePost}
+                  className="p-1.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
+                  title="게시물 삭제"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center space-x-3 mt-3 text-sm">
@@ -82,59 +94,58 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag, onEditPost, 
           </div>
         </div>
       </div>
-      <div className="p-6 overflow-y-auto flex-grow">
-        <div className="prose prose-slate prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-800 prose-pre:text-slate-100 max-w-none">
-          <ReactMarkdown 
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeSanitize]}
-            components={{
-              // 링크를 새 탭에서 열도록 설정
-              a: ({ node, ...props }) => (
-                <a {...props} target="_blank" rel="noopener noreferrer" />
-              ),
-              // 이미지 스타일 적용
-              img: ({ node, ...props }) => (
-                <img {...props} className="rounded-md shadow-sm" />
-              ),
-              // 코드 블록 스타일 적용
-              code: ({ node, className, children, ...props }: any) => {
-                const match = /language-(\w+)/.exec(className || '');
-                const isInline = !match && !className;
-                return isInline ? (
-                  <code className="text-sm bg-slate-100 text-slate-800 px-1 py-0.5 rounded" {...props}>
-                    {children}
-                  </code>
-                ) : (
-                  <code className={`${className} text-sm`} {...props}>
-                    {children}
-                  </code>
-                );
-              }
-            }}
-          >
-            {post.content}
-          </ReactMarkdown>
-        </div>
-         {post.tags && post.tags.length > 0 && (
-          <div className="mt-8 pt-4 border-t border-slate-200 flex items-center flex-wrap gap-2">
-            {post.tags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => onSelectTag(tag)}
-                className="flex items-center space-x-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
-              >
-                <HashtagIcon className="w-3 h-3" />
-                <span>{tag}</span>
-              </button>
-            ))}
+      <div className="overflow-y-auto flex-grow">
+        <div className="p-6">
+          <div className="prose prose-slate prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-800 prose-pre:text-slate-100 max-w-none">
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeSanitize]}
+              components={{
+                // 링크를 새 탭에서 열도록 설정
+                a: ({ node, ...props }) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer" />
+                ),
+                // 이미지 스타일 적용
+                img: ({ node, ...props }) => (
+                  <img {...props} className="rounded-md shadow-sm" />
+                ),
+                // 코드 블록 스타일 적용
+                code: ({ node, className, children, ...props }: any) => {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const isInline = !match && !className;
+                  return isInline ? (
+                    <code className="text-sm bg-slate-100 text-slate-800 px-1 py-0.5 rounded" {...props}>
+                      {children}
+                    </code>
+                  ) : (
+                    <code className={`${className} text-sm`} {...props}>
+                      {children}
+                    </code>
+                  );
+                }
+              }}
+            >
+              {post.content}
+            </ReactMarkdown>
           </div>
-        )}
-      </div>
-      <div className="p-4 bg-white border-t border-slate-200">
-        <div className="flex items-center space-x-2 text-sm text-slate-600">
-            <MessagesSquareIcon className="w-5 h-5" />
-            <span>{post.comments}개의 댓글</span>
+           {post.tags && post.tags.length > 0 && (
+            <div className="mt-8 pt-4 border-t border-slate-200 flex items-center flex-wrap gap-2">
+              {post.tags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => onSelectTag(tag)}
+                  className="flex items-center space-x-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
+                >
+                  <HashtagIcon className="w-3 h-3" />
+                  <span>{tag}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+        
+        {/* 댓글 섹션 추가 */}
+        <CommentSection postId={post.id} />
       </div>
     </div>
   );

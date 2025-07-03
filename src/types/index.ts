@@ -35,6 +35,34 @@ export interface UIPost {
   tags: string[];
 }
 
+// 댓글 관련 타입
+export interface Comment {
+  id: string;             // 댓글 고유 ID
+  postId: string;         // 게시물 ID
+  content: string;        // 댓글 내용
+  author: {               // 작성자 정보
+    name: string;         // 작성자 이름
+    photoURL?: string;    // 작성자 프로필 이미지
+  };
+  authorId: string;       // 작성자 고유 ID
+  createdAt: Timestamp;   // 생성 시간
+  updatedAt: Timestamp;   // 수정 시간
+}
+
+// UI에서 표시할 때 사용하는 댓글 타입
+export interface UIComment {
+  id: string;
+  postId: string;
+  content: string;
+  author: {
+    name: string;
+    photoURL?: string;
+  };
+  authorId: string;
+  date: string;
+  isEditing?: boolean;    // 편집 중인지 여부 (UI 상태용)
+}
+
 export interface Category {
   id: string;
   name:string;
