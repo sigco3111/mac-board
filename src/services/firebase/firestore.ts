@@ -293,9 +293,11 @@ export const createPost = async (postData: Partial<Post>): Promise<string> => {
  * @param userId 현재 로그인한 사용자 ID
  * @returns 수정 완료 Promise
  */
-export const updatePost = async (postId: string, postData: Partial<Post> | Partial<UIPost>, userId?: string): Promise<void> => {
+export const updatePost = async (postId: string | number, postData: Partial<Post> | Partial<UIPost>, userId?: string): Promise<void> => {
   try {
-    const docRef = doc(db, POSTS_COLLECTION, postId);
+    // ID가 number 타입이면 string으로 변환
+    const postIdString = typeof postId === 'number' ? postId.toString() : postId;
+    const docRef = doc(db, POSTS_COLLECTION, postIdString);
     
     // 작성자 권한 확인 (userId가 제공된 경우에만)
     if (userId) {
@@ -343,9 +345,11 @@ export const updatePost = async (postId: string, postData: Partial<Post> | Parti
  * @param userId 현재 로그인한 사용자 ID
  * @returns 삭제 완료 Promise
  */
-export const deletePost = async (postId: string, userId?: string): Promise<void> => {
+export const deletePost = async (postId: string | number, userId?: string): Promise<void> => {
   try {
-    const docRef = doc(db, POSTS_COLLECTION, postId);
+    // ID가 number 타입이면 string으로 변환
+    const postIdString = typeof postId === 'number' ? postId.toString() : postId;
+    const docRef = doc(db, POSTS_COLLECTION, postIdString);
     
     // 작성자 권한 확인 (userId가 제공된 경우에만)
     if (userId) {
@@ -364,5 +368,47 @@ export const deletePost = async (postId: string, userId?: string): Promise<void>
   } catch (error) {
     console.error('게시물 삭제 오류:', error);
     throw new Error(error instanceof Error ? error.message : '게시물을 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.');
+  }
+};
+
+/**
+ * 게시물을 다른 카테고리로 이동하는 함수
+ * @param postId 이동할 게시물 ID
+ * @param categoryId 이동할 카테고리 ID
+ * @param userId 현재 로그인한 사용자 ID
+ * @returns 이동 완료 Promise
+ */
+export const movePost = async (postId: string | number, categoryId: string, userId?: string): Promise<void> => {
+  try {
+    // ID가 number 타입이면 string으로 변환
+    const postIdString = typeof postId === 'number' ? postId.toString() : postId;
+    const docRef = doc(db, POSTS_COLLECTION, postIdString);
+    
+    // 작성자 권한 확인 (userId가 제공된 경우에만)
+    if (userId) {
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('게시물을 찾을 수 없습니다.');
+      }
+      
+      const postAuthorId = docSnap.data().authorId;
+      if (postAuthorId !== userId) {
+        throw new Error('자신이 작성한 게시물만 이동할 수 있습니다.');
+      }
+      
+      // 동일한 카테고리로 이동하려는 경우
+      if (docSnap.data().category === categoryId) {
+        throw new Error('이미 해당 카테고리에 속해 있는 게시물입니다.');
+      }
+    }
+    
+    // 카테고리 업데이트 및 수정 시간 갱신
+    await updateDoc(docRef, {
+      category: categoryId,
+      updatedAt: Timestamp.now()
+    });
+  } catch (error) {
+    console.error('게시물 이동 오류:', error);
+    throw new Error(error instanceof Error ? error.message : '게시물을 이동하지 못했습니다. 잠시 후 다시 시도해주세요.');
   }
 }; 

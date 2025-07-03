@@ -9,7 +9,7 @@ import WindowMenuBar from './WindowMenuBar';
 import ConfirmationModal from './ConfirmationModal';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
 import { usePosts } from '../src/hooks/usePosts';
-import { deletePost, updatePost, createPost } from '../src/services/firebase/firestore';
+import { deletePost, updatePost, createPost, movePost } from '../src/services/firebase/firestore';
 
 const categoriesData: Category[] = [
   { id: 'all', name: '모든 게시물', icon: <MessagesSquareIcon /> },
@@ -228,10 +228,41 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     }
   }, [selectedPost, user.uid, refreshPosts]);
 
-  const handleMovePost = useCallback((categoryId: string) => {
-    // 이 기능은 추후 구현 예정
-    console.log('게시물 이동 기능은 아직 구현되지 않았습니다:', categoryId);
-  }, []);
+  const handleMovePost = useCallback(async (categoryId: string) => {
+    if (!selectedPost) return;
+    
+    try {
+      // 이미 동일한 카테고리인 경우 처리
+      if (selectedPost.category === categoryId) {
+        alert('이미 해당 카테고리에 속해 있는 게시물입니다.');
+        return;
+      }
+      
+      // 선택한 카테고리 이름 가져오기
+      const categoryObj = categories.find(c => c.id === categoryId);
+      const categoryName = categoryObj ? categoryObj.name : categoryId;
+      
+      // Firebase에서 게시물 이동 (id는 string 타입으로 확인됨)
+      await movePost(selectedPost.id, categoryId, user.uid);
+      
+      // 이동 성공 메시지
+      alert(`게시물이 "${categoryName}" 카테고리로 이동되었습니다.`);
+      
+      // 이동된 게시물의 UI 정보 업데이트 (새로고침하기 전에 UI 반영)
+      if (selectedPost) {
+        setSelectedPost({
+          ...selectedPost,
+          category: categoryId,
+        });
+      }
+      
+      // 게시물 목록 새로고침
+      refreshPosts();
+    } catch (error) {
+      console.error('게시물 이동 오류:', error);
+      alert('게시물 이동 중 오류가 발생했습니다.');
+    }
+  }, [selectedPost, user.uid, refreshPosts, categories]);
 
   const handleSavePost = useCallback(async (postData: { title: string; category: string; content: string; tags: string[] }) => {
     try {
@@ -287,6 +318,13 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     // 권한 확인: 현재 사용자가 게시물 작성자인지 확인
     const canEditOrDelete = isPostSelected && isPostOwner(selectedPost);
     
+    // 선택된 게시물이 속한 카테고리 이름 (UI에 표시용)
+    let selectedCategoryName = '';
+    if (selectedPost?.category) {
+      const categoryObj = categories.find(c => c.id === selectedPost.category);
+      selectedCategoryName = categoryObj ? categoryObj.name : selectedPost.category;
+    }
+    
     const moveSubMenu: MenuItem[] = categories
       .filter(c => c.id !== 'all' && c.id !== selectedPost?.category)
       .map(c => ({
@@ -308,18 +346,20 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
         name: '편집',
         items: [
           { 
-            label: '수정...', 
+            label: '게시물 수정...', 
             action: handleOpenEditModal, 
             disabled: !isPostSelected || !canEditOrDelete 
           },
           { 
-            label: '삭제', 
+            label: '게시물 삭제', 
             action: requestDeletePost, 
             disabled: !isPostSelected || !canEditOrDelete 
           },
           { isSeparator: true },
           { 
-            label: '게시물 이동', 
+            label: selectedPost?.category ? 
+              `카테고리 이동 (현재: ${selectedCategoryName})` : 
+              '카테고리 이동', 
             disabled: !isPostSelected || !canEditOrDelete || moveSubMenu.length === 0,
             items: moveSubMenu 
           },
