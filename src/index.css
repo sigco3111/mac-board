@@ -2,6 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 마크다운 스타일 추가 */
+.prose pre {
+  @apply bg-slate-800 text-slate-100 p-4 rounded-md overflow-x-auto;
+}
+
+.prose pre code {
+  @apply bg-transparent text-inherit p-0 border-0 shadow-none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.prose code {
+  @apply text-sm;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-slate-300 pl-4 italic text-slate-600;
+}
+
+.prose table {
+  @apply border-collapse border border-slate-300;
+}
+
+.prose th, .prose td {
+  @apply border border-slate-300 p-2;
+}
+
+.prose th {
+  @apply bg-slate-100;
+}
+
+.prose img {
+  @apply max-w-full rounded-md shadow-sm my-4;
+}
+
+.prose hr {
+  @apply my-6 border-t border-slate-200;
+}
+
+/* 마크다운 체크박스 스타일 */
+.prose input[type="checkbox"] {
+  @apply mr-2 rounded border-slate-300 text-blue-600 focus:ring-blue-500;
+}
+
+/* 마크다운 링크 스타일 */
+.prose a {
+  @apply text-blue-600 no-underline hover:underline;
+}
+
+/* 마크다운 목록 스타일 */
+.prose ul {
+  @apply list-disc pl-5 my-4;
+}
+
+.prose ol {
+  @apply list-decimal pl-5 my-4;
+}
+
+/* 마크다운 제목 스타일 */
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  @apply font-bold text-slate-900 mt-6 mb-4;
+}
+
+.prose h1 {
+  @apply text-3xl;
+}
+
+.prose h2 {
+  @apply text-2xl;
+}
+
+.prose h3 {
+  @apply text-xl;
+}
+
+.prose h4 {
+  @apply text-lg;
+}
+
+.prose h5, .prose h6 {
+  @apply text-base;
+}
+
 @layer base {
   html {
     font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Helvetica Neue', sans-serif;

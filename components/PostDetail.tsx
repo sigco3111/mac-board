@@ -2,6 +2,9 @@ import React from 'react';
 import type { UIPost } from '../src/types';
 import { MessagesSquareIcon, HashtagIcon, PencilIcon, TrashIcon } from './icons';
 import { useAuth } from '../src/hooks/useAuth';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 
 interface PostDetailProps {
   post: UIPost | null;
@@ -80,7 +83,38 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag, onEditPost, 
         </div>
       </div>
       <div className="p-6 overflow-y-auto flex-grow">
-        <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: post.content }}></div>
+        <div className="prose prose-slate prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-800 prose-pre:text-slate-100 max-w-none">
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeSanitize]}
+            components={{
+              // 링크를 새 탭에서 열도록 설정
+              a: ({ node, ...props }) => (
+                <a {...props} target="_blank" rel="noopener noreferrer" />
+              ),
+              // 이미지 스타일 적용
+              img: ({ node, ...props }) => (
+                <img {...props} className="rounded-md shadow-sm" />
+              ),
+              // 코드 블록 스타일 적용
+              code: ({ node, className, children, ...props }: any) => {
+                const match = /language-(\w+)/.exec(className || '');
+                const isInline = !match && !className;
+                return isInline ? (
+                  <code className="text-sm bg-slate-100 text-slate-800 px-1 py-0.5 rounded" {...props}>
+                    {children}
+                  </code>
+                ) : (
+                  <code className={`${className} text-sm`} {...props}>
+                    {children}
+                  </code>
+                );
+              }
+            }}
+          >
+            {post.content}
+          </ReactMarkdown>
+        </div>
          {post.tags && post.tags.length > 0 && (
           <div className="mt-8 pt-4 border-t border-slate-200 flex items-center flex-wrap gap-2">
             {post.tags.map(tag => (
