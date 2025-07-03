@@ -18,7 +18,8 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
   runTransaction,
-  increment
+  increment,
+  setDoc
 } from 'firebase/firestore';
 import { db } from './config';
 import type { Post, UIPost, Comment, UIComment } from '../../types/index';
@@ -622,4 +623,178 @@ export const deleteComment = async (commentId: string, postId: string, userId: s
     console.error('댓글 삭제 오류:', error);
     throw new Error(error instanceof Error ? error.message : '댓글을 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.');
   }
+}; 
+
+/**
+ * 게시물을 북마크에 추가하는 함수
+ * @param userId 사용자 ID
+ * @param postId 북마크할 게시물 ID
+ * @returns 생성된 북마크 ID
+ */
+export const addBookmark = async (userId: string, postId: string): Promise<string> => {
+  try {
+    if (!userId || !postId) {
+      throw new Error('사용자 ID와 게시물 ID는 필수입니다.');
+    }
+
+    // 이미 북마크되어 있는지 확인
+    const isAlreadyBookmarked = await isBookmarked(userId, postId);
+    if (isAlreadyBookmarked) {
+      throw new Error('이미 북마크된 게시물입니다.');
+    }
+
+    // 북마크 문서 생성
+    const bookmarkRef = doc(collection(db, BOOKMARKS_COLLECTION));
+    await setDoc(bookmarkRef, {
+      userId,
+      postId,
+      createdAt: Timestamp.now()
+    });
+
+    return bookmarkRef.id;
+  } catch (error) {
+    console.error('북마크 추가 오류:', error);
+    throw new Error(error instanceof Error ? error.message : '북마크를 추가하지 못했습니다. 잠시 후 다시 시도해주세요.');
+  }
+};
+
+/**
+ * 북마크에서 게시물을 제거하는 함수
+ * @param userId 사용자 ID
+ * @param postId 북마크 해제할 게시물 ID
+ */
+export const removeBookmark = async (userId: string, postId: string): Promise<void> => {
+  try {
+    if (!userId || !postId) {
+      throw new Error('사용자 ID와 게시물 ID는 필수입니다.');
+    }
+
+    // 북마크 조회
+    const q = query(
+      collection(db, BOOKMARKS_COLLECTION),
+      where('userId', '==', userId),
+      where('postId', '==', postId),
+      limit(1)
+    );
+
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      throw new Error('북마크를 찾을 수 없습니다.');
+    }
+
+    // 북마크 문서 삭제
+    const bookmarkDoc = querySnapshot.docs[0];
+    await deleteDoc(doc(db, BOOKMARKS_COLLECTION, bookmarkDoc.id));
+  } catch (error) {
+    console.error('북마크 제거 오류:', error);
+    throw new Error(error instanceof Error ? error.message : '북마크를 제거하지 못했습니다. 잠시 후 다시 시도해주세요.');
+  }
+};
+
+/**
+ * 게시물이 북마크되었는지 확인하는 함수
+ * @param userId 사용자 ID
+ * @param postId 게시물 ID
+ * @returns 북마크 여부
+ */
+export const isBookmarked = async (userId: string, postId: string): Promise<boolean> => {
+  try {
+    if (!userId || !postId) {
+      return false;
+    }
+
+    const q = query(
+      collection(db, BOOKMARKS_COLLECTION),
+      where('userId', '==', userId),
+      where('postId', '==', postId),
+      limit(1)
+    );
+
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('북마크 상태 확인 오류:', error);
+    return false;
+  }
+};
+
+/**
+ * 사용자가 북마크한 게시물 목록을 가져오는 함수
+ * @param userId 사용자 ID
+ * @returns 북마크한 게시물 목록
+ */
+export const fetchBookmarkedPosts = async (userId: string): Promise<UIPost[]> => {
+  let attempts = 0;
+  
+  while (attempts < MAX_RETRY_COUNT) {
+    try {
+      attempts++;
+      
+      if (!userId) {
+        return [];
+      }
+      
+      // 1. 사용자의 북마크 목록 조회
+      const bookmarksQuery = query(
+        collection(db, BOOKMARKS_COLLECTION),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const bookmarksSnapshot = await getDocs(bookmarksQuery);
+      
+      if (bookmarksSnapshot.empty) {
+        return [];
+      }
+      
+      // 2. 북마크한 게시물 ID 목록 추출
+      const postIds = bookmarksSnapshot.docs.map(doc => doc.data().postId);
+      
+      // 3. 빈 배열이면 조기 반환
+      if (postIds.length === 0) {
+        return [];
+      }
+      
+      // 4. 각 게시물 정보 조회
+      const postsPromises = postIds.map(async (postId) => {
+        try {
+          const postDoc = await getDoc(doc(db, POSTS_COLLECTION, postId));
+          if (postDoc.exists()) {
+            const post = mapDocToPost(postDoc as QueryDocumentSnapshot<DocumentData>);
+            return convertToUIPost(post);
+          }
+          return null;
+        } catch (error) {
+          console.error(`게시물 ID ${postId} 조회 오류:`, error);
+          return null;
+        }
+      });
+      
+      const posts = await Promise.all(postsPromises);
+      
+      // null 값 필터링
+      return posts.filter((post): post is UIPost => post !== null);
+    } catch (error: any) {
+      console.error(`북마크 게시물 조회 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
+      
+      // Firebase 인덱스 오류 처리
+      if (error.code === 'failed-precondition' || error.message?.includes('requires an index')) {
+        const indexUrl = error.message?.match(/https:\/\/console\.firebase\.google\.com[^\s"]*/)?.[0];
+        const indexMessage = indexUrl 
+          ? `Firebase 복합 인덱스가 필요합니다. 다음 링크에서 인덱스를 생성해주세요: ${indexUrl}`
+          : 'Firebase 복합 인덱스가 필요합니다. Firebase 콘솔에서 인덱스를 생성해주세요.';
+        
+        console.error(indexMessage);
+        throw new Error(`북마크 게시물 조회를 위한 ${indexMessage}`);
+      }
+      
+      if (attempts >= MAX_RETRY_COUNT) {
+        throw new Error(`북마크 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
+      }
+      
+      await delay(attempts);
+    }
+  }
+  
+  throw new Error(`북마크 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
 }; 

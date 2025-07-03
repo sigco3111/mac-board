@@ -10,6 +10,7 @@ import ConfirmationModal from './ConfirmationModal';
 import Toast from './Toast';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
 import { usePosts } from '../src/hooks/usePosts';
+import { useBookmarks } from '../src/hooks/useBookmarks';
 import { deletePost, updatePost, createPost, movePost } from '../src/services/firebase/firestore';
 
 const categoriesData: Category[] = [
@@ -27,6 +28,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
   const [categories] = useState<Category[]>(categoriesData);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [showBookmarks, setShowBookmarks] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -58,16 +60,36 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     setToast(prev => ({ ...prev, visible: false }));
   }, []);
 
+  // 북마크 관련 기능 가져오기
+  const { 
+    bookmarkedPosts, 
+    loading: bookmarkLoading, 
+    error: bookmarkError,
+    refresh: refreshBookmarks
+  } = useBookmarks(user?.uid);
+
   // Firebase에서 게시물 데이터 가져오기
   const { 
-    posts, 
-    loading, 
-    error, 
+    posts: fetchedPosts, 
+    loading: postsLoading, 
+    error: postsError, 
     refresh: refreshPosts 
   } = usePosts({
     category: selectedCategory === 'all' ? undefined : selectedCategory,
     tag: selectedTag || undefined
   });
+
+  // 표시할 게시물 결정
+  const posts = useMemo(() => {
+    if (showBookmarks) {
+      return bookmarkedPosts;
+    }
+    return fetchedPosts;
+  }, [showBookmarks, bookmarkedPosts, fetchedPosts]);
+
+  // 로딩 및 에러 상태 통합
+  const loading = showBookmarks ? bookmarkLoading : postsLoading;
+  const error = showBookmarks ? bookmarkError : postsError;
 
   // 선택된 게시물 상태 관리
   const [selectedPost, setSelectedPost] = useState<UIPost | null>(null);
@@ -109,6 +131,30 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     
     setPosition({ x: initialX, y: initialY });
   }, []);
+
+  // 북마크 필터링 토글 처리
+  const handleToggleBookmarks = useCallback(() => {
+    if (!showBookmarks) {
+      // 북마크 모드로 전환
+      setShowBookmarks(true);
+      setSelectedCategory('all');
+      setSelectedTag(null);
+      setSelectedPost(null);
+      refreshBookmarks();
+    } else {
+      // 북마크 모드 해제
+      setShowBookmarks(false);
+    }
+  }, [showBookmarks, refreshBookmarks]);
+
+  // 게시물 데이터 새로고침 통합 함수
+  const refreshPostData = useCallback(() => {
+    if (showBookmarks) {
+      refreshBookmarks();
+    } else {
+      refreshPosts();
+    }
+  }, [showBookmarks, refreshBookmarks, refreshPosts]);
 
   const handleToggleMaximize = useCallback(() => {
     const MENU_BAR_HEIGHT = 28; // Corresponds to h-7 in TailwindCSS
@@ -191,6 +237,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
   const handleSelectCategory = useCallback((categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedTag(null); // Clear tag selection when category is selected
+    setShowBookmarks(false); // 북마크 모드 해제
     
     // 카테고리 변경 시 선택된 게시물 초기화
     setSelectedPost(null);
@@ -199,6 +246,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
   const handleSelectTag = useCallback((tag: string | null) => {
     setSelectedTag(tag); // 태그 선택 또는 해제
     setSelectedCategory('all'); // 카테고리 선택 초기화
+    setShowBookmarks(false); // 북마크 모드 해제
     
     // 태그 변경 시 선택된 게시물 초기화
     setSelectedPost(null);
@@ -246,14 +294,14 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       await deletePost(selectedPost.id, user.uid);
       
       // 삭제 성공 후 게시물 목록 새로고침
-      refreshPosts();
+      refreshPostData();
       setIsDeleteModalOpen(false);
       showToast('게시물이 성공적으로 삭제되었습니다.', 'success');
     } catch (error) {
       console.error('게시물 삭제 오류:', error);
       showToast('게시물 삭제 중 오류가 발생했습니다.', 'error');
     }
-  }, [selectedPost, user.uid, refreshPosts, showToast]);
+  }, [selectedPost, user.uid, refreshPostData, showToast]);
 
   const handleMovePost = useCallback(async (categoryId: string) => {
     if (!selectedPost) return;
@@ -284,12 +332,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       }
       
       // 게시물 목록 새로고침
-      refreshPosts();
+      refreshPostData();
     } catch (error) {
       console.error('게시물 이동 오류:', error);
       showToast('게시물 이동 중 오류가 발생했습니다.', 'error');
     }
-  }, [selectedPost, user.uid, refreshPosts, categories, showToast]);
+  }, [selectedPost, user.uid, refreshPostData, categories, showToast]);
 
   const handleSavePost = useCallback(async (postData: { title: string; category: string; content: string; tags: string[] }) => {
     try {
@@ -325,13 +373,27 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
       setIsModalOpen(false);
       
       // 게시물 목록 새로고침
-      refreshPosts();
+      refreshPostData();
     } catch (error) {
       console.error('게시물 저장 오류:', error);
       showToast('게시물 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'error');
     }
-  }, [postToEdit, user, refreshPosts, showToast]);
+  }, [postToEdit, user, refreshPostData, showToast]);
   
+  // 검색 필터링 처리
+  const filteredPosts = useMemo(() => {
+    if (searchTerm.trim() === '') {
+      return posts;
+    }
+    
+    return posts.filter(post => 
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      post.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [posts, searchTerm]);
+
+  // 모든 태그 수집
   const allTags = useMemo(() => {
     const tagsSet = new Set<string>();
     posts.forEach(post => {
@@ -395,37 +457,6 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     ]);
   }, [selectedPost, categories, onClose, handleOpenEditModal, requestDeletePost, handleMovePost, handleOpenNewPost, isPostOwner]);
   
-  // 검색 필터링 처리
-  const filteredPosts = useMemo(() => {
-    if (searchTerm.trim() === '') {
-      return posts;
-    }
-    
-    return posts.filter(post => 
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      post.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [posts, searchTerm]);
-
-  // 로딩 및 에러 상태 처리
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-white/80 backdrop-blur-xl">
-        <div className="text-center p-6 max-w-md">
-          <h2 className="text-xl font-medium text-red-600 mb-4">데이터 로드 오류</h2>
-          <p className="text-slate-700 mb-4">{error.message}</p>
-          <button 
-            onClick={refreshPosts}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          >
-            다시 시도
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       ref={windowRef}
@@ -462,6 +493,8 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
           allTags={allTags}
           selectedTag={selectedTag}
           onSelectTag={handleSelectTag}
+          showBookmarks={showBookmarks}
+          onToggleBookmarks={handleToggleBookmarks}
         />
         
         {loading ? (

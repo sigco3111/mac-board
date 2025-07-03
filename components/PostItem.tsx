@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { UIPost } from '../src/types';
 import { useAuth } from '../src/hooks/useAuth';
-import { MessagesSquareIcon } from './icons';
+import { useBookmarks } from '../src/hooks/useBookmarks';
+import { MessagesSquareIcon, BookmarkIcon } from './icons';
 
 interface PostItemProps {
   post: UIPost;
@@ -12,6 +13,15 @@ interface PostItemProps {
 const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
   // 인증 정보 가져오기
   const { user } = useAuth();
+  // 북마크 기능 사용
+  const { isBookmarked, toggleBookmark, checkBookmarkStatus } = useBookmarks(user?.uid);
+  
+  // 컴포넌트 마운트 시 북마크 상태 확인
+  useEffect(() => {
+    if (user && post.id) {
+      checkBookmarkStatus(post.id);
+    }
+  }, [post.id, user, checkBookmarkStatus]);
   
   // 기본 프로필 이미지
   const defaultAvatar = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNjY2MiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCI+PC9jaXJjbGU+PC9zdmc+`;
@@ -20,6 +30,17 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
   const avatarUrl = (user && user.uid === post.authorId && !user.isAnonymous && user.photoURL) 
     ? user.photoURL 
     : defaultAvatar;
+
+  // 북마크 토글 처리
+  const handleBookmarkToggle = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 부모 onClick 이벤트 전파 방지
+    if (user) {
+      toggleBookmark(post.id);
+    }
+  };
+
+  // 북마크 상태에 따른 아이콘 설정
+  const bookmarkFill = isBookmarked(post.id) ? 'currentColor' : 'none';
 
   return (
     <li
@@ -55,7 +76,16 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
             <span>{new Date(post.date).toLocaleDateString()}</span>
           </div>
           <div className="flex items-center mt-2">
-            {post.isNew && <span className="w-3 h-3 bg-blue-500 rounded-full"></span>}
+            {post.isNew && <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>}
+            {user && (
+              <button 
+                onClick={handleBookmarkToggle}
+                className="text-slate-600 hover:text-blue-500 transition-colors"
+                title={isBookmarked(post.id) ? "북마크 해제" : "북마크 추가"}
+              >
+                <BookmarkIcon className="w-4 h-4" fill={bookmarkFill} />
+              </button>
+            )}
           </div>
         </div>
       </div>
