@@ -289,13 +289,22 @@ export const createPost = async (postData: Partial<Post>): Promise<string> => {
 /**
  * 게시물을 수정하는 함수
  */
-export const updatePost = async (postId: string, postData: Partial<Post>): Promise<void> => {
+export const updatePost = async (postId: string, postData: Partial<Post> | Partial<UIPost>): Promise<void> => {
   try {
     const docRef = doc(db, POSTS_COLLECTION, postId);
     const updateData: Record<string, any> = { ...postData };
     
     // updatedAt은 항상 현재 시간으로 설정
     updateData.updatedAt = Timestamp.now();
+    
+    // UIPost 타입인 경우 변환
+    if ('date' in updateData) {
+      delete updateData.date;  // Firestore에 저장하지 않음
+    }
+    if ('comments' in updateData) {
+      updateData.commentCount = updateData.comments;
+      delete updateData.comments;  // 필드명 변환
+    }
     
     // createdAt은 수정 불가
     delete updateData.createdAt;

@@ -9,7 +9,7 @@ import WindowMenuBar from './WindowMenuBar';
 import ConfirmationModal from './ConfirmationModal';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
 import { usePosts } from '../src/hooks/usePosts';
-import { deletePost } from '../src/services/firebase/firestore';
+import { deletePost, updatePost, createPost } from '../src/services/firebase/firestore';
 
 const categoriesData: Category[] = [
   { id: 'all', name: '모든 게시물', icon: <MessagesSquareIcon /> },
@@ -217,14 +217,46 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user }) => {
     console.log('게시물 이동 기능은 아직 구현되지 않았습니다:', categoryId);
   }, []);
 
-  const handleSavePost = useCallback((postData: { title: string; category: string; content: string; tags: string[] }) => {
-    // 이 기능은 추후 구현 예정
-    console.log('게시물 저장 기능은 아직 구현되지 않았습니다:', postData);
-    setIsModalOpen(false);
-    
-    // 게시물 목록 새로고침
-    refreshPosts();
-  }, [refreshPosts]);
+  const handleSavePost = useCallback(async (postData: { title: string; category: string; content: string; tags: string[] }) => {
+    try {
+      // 로딩 상태 설정 (필요하면 상태 추가)
+      
+      if (postToEdit) {
+        // 기존 게시물 수정
+        await updatePost(postToEdit.id, {
+          title: postData.title,
+          category: postData.category,
+          content: postData.content,
+          tags: postData.tags,
+          // updatedAt은 updatePost 함수 내부에서 자동 설정
+        });
+        console.log('게시물이 성공적으로 수정되었습니다.');
+      } else {
+        // 새 게시물 작성
+        const newPostId = await createPost({
+          title: postData.title,
+          category: postData.category,
+          content: postData.content,
+          tags: postData.tags || [],
+          author: {
+            name: user.displayName || '익명 사용자',
+          },
+          authorId: user.uid,
+          // createdAt과 updatedAt은 createPost 함수 내부에서 자동 설정
+        });
+        console.log('새 게시물이 성공적으로 생성되었습니다. ID:', newPostId);
+      }
+      
+      // 모달 닫기
+      setIsModalOpen(false);
+      
+      // 게시물 목록 새로고침
+      refreshPosts();
+    } catch (error) {
+      console.error('게시물 저장 오류:', error);
+      alert('게시물 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }, [postToEdit, user, refreshPosts]);
   
   const allTags = useMemo(() => {
     const tagsSet = new Set<string>();
