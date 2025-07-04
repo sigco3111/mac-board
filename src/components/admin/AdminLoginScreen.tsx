@@ -19,6 +19,7 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
   const [password, setPassword] = useState<string>('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [time, setTime] = useState(new Date());
+  const [loginSuccess, setLoginSuccess] = useState<boolean>(false);
   
   // 로그인 시도 여부 추적을 위한 ref
   const loginAttemptedRef = useRef<boolean>(false);
@@ -59,6 +60,27 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
     }
   }, [error]);
 
+  // 로그인 성공 처리 효과
+  useEffect(() => {
+    // 로그인 시도 후 admin 상태가 변경되었을 때만 실행
+    if (loginAttemptedRef.current && admin && isMountedRef.current) {
+      console.log('로그인 성공 감지, 관리자 페이지로 이동 준비:', admin);
+      
+      // 안전하게 콜백 호출
+      try {
+        if (onLogin) {
+          onLogin(admin);
+        }
+        
+        // 로그인 성공 상태 설정
+        setLoginSuccess(true);
+        
+      } catch (err) {
+        console.error('로그인 성공 처리 중 오류:', err);
+      }
+    }
+  }, [admin, onLogin]);
+
   /**
    * 현재 선택(Selection) 초기화 함수
    */
@@ -96,25 +118,16 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
     });
   };
 
-  // 로그인 성공 처리 효과
-  useEffect(() => {
-    // 로그인 시도 후 admin 상태가 변경되었을 때만 실행
-    if (loginAttemptedRef.current && admin && isMountedRef.current) {
-      console.log('로그인 성공 감지, 관리자 페이지로 이동 준비:', admin);
-      
-      // 안전하게 콜백 호출 및 페이지 전환
-      try {
-        if (onLogin) {
-          onLogin(admin);
-        }
-        
-        // 즉시 페이지 전환 시도
-        safeRedirect('/admin');
-      } catch (err) {
-        console.error('로그인 성공 처리 중 오류:', err);
-      }
-    }
-  }, [admin, onLogin]);
+  /**
+   * 페이지 새로고침 함수
+   */
+  const refreshPage = () => {
+    // 현재 선택 초기화
+    clearSelection();
+    
+    console.log('페이지 새로고침 실행');
+    window.location.reload();
+  };
 
   /**
    * 로그인 폼 제출 핸들러
@@ -138,7 +151,7 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
       
       if (success && isMountedRef.current) {
         console.log('로그인 성공, 상태 업데이트');
-        // 로그인 성공 시 useEffect에서 처리
+        setLoginSuccess(true);
       } else if (isMountedRef.current) {
         // 로그인 실패 시 에러 메시지 표시
         setLoginError('아이디 또는 비밀번호가 올바르지 않습니다.');
@@ -177,7 +190,7 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
               onChange={(e) => setId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="관리자 아이디 입력"
-              disabled={isLoading}
+              disabled={isLoading || loginSuccess}
               autoComplete="off"
             />
           </div>
@@ -194,7 +207,7 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="비밀번호 입력"
-              disabled={isLoading}
+              disabled={isLoading || loginSuccess}
             />
           </div>
           
@@ -205,12 +218,32 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
             </div>
           )}
           
+          {/* 로그인 성공 메시지 */}
+          {loginSuccess && admin && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              <div className="flex items-center mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="font-medium">Admin 상태: 있음</p>
+              </div>
+              <p>로그인 시도: 예</p>
+              <p>로그인 성공: 예</p>
+              <p>모달 표시: 아니오</p>
+            </div>
+          )}
+          
+          {/* 항상 표시되는 안내 메시지 */}
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded">
+            <p className="font-bold text-center text-red-600">"로그인 성공후 새로고침을 해주세요"</p>
+          </div>
+          
           {/* 로그인 버튼 */}
           <div>
             <button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-              disabled={isLoading}
+              disabled={isLoading || loginSuccess}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
@@ -220,6 +253,8 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onLogin }) => {
                   </svg>
                   로그인 중...
                 </span>
+              ) : loginSuccess ? (
+                '로그인 성공'
               ) : (
                 '로그인'
               )}
