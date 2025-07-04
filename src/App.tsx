@@ -11,6 +11,8 @@ import { useAdminAuth } from './hooks/useAdminAuth';
 import AdminLayout from './components/admin/AdminLayout';
 // 실제 구현된 관리자 게시물 관리 컴포넌트 임포트
 import AdminPosts from './components/admin/posts';
+// 카테고리 관리 컴포넌트 임포트
+import CategoryManagement from './components/admin/categories';
 import './index.css';
 
 // 로그아웃 상태를 저장하기 위한 로컬 스토리지 키
@@ -24,17 +26,6 @@ const AdminDashboard: React.FC = () => (
   <AdminLayout title="대시보드">
     <h2 className="text-xl font-semibold mb-4">관리자 대시보드</h2>
     <p>관리자 대시보드 내용이 여기에 표시됩니다.</p>
-  </AdminLayout>
-);
-
-/**
- * 어드민 카테고리 관리 페이지 컴포넌트
- * 실제 구현은 별도 파일로 분리할 예정입니다.
- */
-const AdminCategories: React.FC = () => (
-  <AdminLayout title="카테고리 관리">
-    <h2 className="text-xl font-semibold mb-4">카테고리 관리</h2>
-    <p>카테고리 관리 내용이 여기에 표시됩니다.</p>
   </AdminLayout>
 );
 
@@ -169,7 +160,7 @@ const App: React.FC = () => {
       {/* 어드민 라우트 */}
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/posts/*" element={<AdminLayout title="게시물 관리"><AdminPosts /></AdminLayout>} />
-      <Route path="/admin/categories" element={<AdminCategories />} />
+      <Route path="/admin/categories" element={<AdminLayout title="카테고리 관리"><CategoryManagement /></AdminLayout>} />
       <Route path="/admin/tags" element={<AdminTags />} />
       <Route path="/admin/backup" element={<AdminBackup />} />
       
