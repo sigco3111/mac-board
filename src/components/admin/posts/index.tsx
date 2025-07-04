@@ -18,11 +18,23 @@ const AdminPosts: React.FC = () => {
     navigate(`/admin/posts/${postId}`);
   }, [navigate]);
   
+  // 새 게시물 작성 핸들러
+  const handleCreatePost = useCallback(() => {
+    navigate('/admin/posts/new');
+  }, [navigate]);
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">게시물 관리</h1>
         <div className="flex space-x-2">
+          <button
+            type="button"
+            onClick={handleCreatePost}
+            className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            새 게시물
+          </button>
           <button
             type="button"
             onClick={() => navigate('/admin/posts/stats')}
@@ -35,6 +47,7 @@ const AdminPosts: React.FC = () => {
       
       <Routes>
         <Route path="/" element={<PostList onViewDetail={handleViewPostDetail} />} />
+        <Route path="/new" element={<PostDetail isCreateMode={true} />} />
         <Route path="/:postId" element={<PostDetail />} />
       </Routes>
     </div>

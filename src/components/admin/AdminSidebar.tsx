@@ -119,12 +119,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed = false, onToggle
           name: '게시물 목록',
           path: '/admin/posts',
           icon: <></>
-        },
-        {
-          id: 'posts-create',
-          name: '게시물 작성',
-          path: '/admin/posts/create',
-          icon: <></>
         }
       ]
     },

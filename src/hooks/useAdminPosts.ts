@@ -10,7 +10,8 @@ import {
   updatePostAdmin, 
   deletePostAdmin,
   bulkDeletePostsAdmin,
-  fetchPostStatsAdmin
+  fetchPostStatsAdmin,
+  createPostAdmin
 } from '../services/admin/posts';
 import { useAdminAuth } from './useAdminAuth';
 import type { UIPost, Post } from '../types';
@@ -357,6 +358,31 @@ export const useAdminPosts = (options: UseAdminPostsOptions = {}) => {
   }, [isAdmin]);
 
   /**
+   * 게시물 생성 함수
+   * @param postData 생성할 게시물 데이터
+   */
+  const createPost = useCallback(async (postData: Partial<Post> | Partial<UIPost>) => {
+    if (!isAdmin || !admin) {
+      throw new Error('관리자 권한이 필요합니다.');
+    }
+
+    try {
+      const newPost = await createPostAdmin(postData, admin.id);
+      
+      // 게시물 목록 갱신
+      setPostsState(prev => ({
+        ...prev,
+        posts: [newPost, ...prev.posts]
+      }));
+
+      return newPost;
+    } catch (error) {
+      console.error('게시물 생성 오류:', error);
+      throw error instanceof Error ? error : new Error('게시물 생성 중 오류가 발생했습니다.');
+    }
+  }, [isAdmin, admin]);
+
+  /**
    * 게시물 선택 토글 함수
    * @param postId 게시물 ID
    */
@@ -448,6 +474,7 @@ export const useAdminPosts = (options: UseAdminPostsOptions = {}) => {
     loadPostDetail,
     updatePost,
     deletePost,
+    createPost,
     bulkDeletePosts,
     loadPostStats,
     togglePostSelection,

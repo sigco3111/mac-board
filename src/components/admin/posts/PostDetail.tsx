@@ -7,16 +7,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAdminPosts } from '../../../hooks/useAdminPosts';
 import { formatDate, formatDateTime } from '../../../utils/formatDate';
 
+interface PostDetailProps {
+  isCreateMode?: boolean;
+}
+
 /**
  * 관리자 게시물 상세 컴포넌트
  */
-const PostDetail: React.FC = () => {
+const PostDetail: React.FC<PostDetailProps> = ({ isCreateMode = false }) => {
   // URL 파라미터에서 게시물 ID 추출
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
   
   // 수정 모드 상태
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(isCreateMode);
   
   // 관리자 게시물 훅 사용
   const {
@@ -26,6 +30,7 @@ const PostDetail: React.FC = () => {
     updatePost,
     deletePost,
     loadPostDetail,
+    createPost,
   } = useAdminPosts();
   
   // 수정 폼 상태
@@ -39,14 +44,14 @@ const PostDetail: React.FC = () => {
   
   // 게시물 로드
   useEffect(() => {
-    if (postId) {
+    if (postId && !isCreateMode) {
       loadPostDetail(postId);
     }
-  }, [postId, loadPostDetail]);
+  }, [postId, loadPostDetail, isCreateMode]);
   
   // 게시물 데이터가 변경되면 폼 데이터 업데이트
   useEffect(() => {
-    if (postDetail) {
+    if (postDetail && !isCreateMode) {
       setFormData({
         title: postDetail.title || '',
         content: postDetail.content || '',
@@ -55,7 +60,7 @@ const PostDetail: React.FC = () => {
         isPublished: true // 기본값으로 true 사용
       });
     }
-  }, [postDetail]);
+  }, [postDetail, isCreateMode]);
   
   // 입력 필드 변경 핸들러
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -76,6 +81,11 @@ const PostDetail: React.FC = () => {
   
   // 수정 취소 핸들러
   const handleCancelEdit = useCallback(() => {
+    if (isCreateMode) {
+      navigate('/admin/posts');
+      return;
+    }
+    
     if (postDetail) {
       setFormData({
         title: postDetail.title || '',
@@ -86,13 +96,11 @@ const PostDetail: React.FC = () => {
       });
     }
     setIsEditMode(false);
-  }, [postDetail]);
+  }, [postDetail, isCreateMode, navigate]);
   
   // 게시물 수정 제출 핸들러
   const handleSubmitEdit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!postId) return;
     
     try {
       // 태그를 배열로 변환
@@ -101,18 +109,27 @@ const PostDetail: React.FC = () => {
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
       
-      await updatePost(postId, {
+      const postData = {
         ...formData,
         tags: tagsArray
-      });
+      };
       
-      setIsEditMode(false);
-      alert('게시물이 성공적으로 업데이트되었습니다.');
+      if (isCreateMode) {
+        // 새 게시물 생성
+        const newPost = await createPost(postData);
+        alert('게시물이 성공적으로 생성되었습니다.');
+        navigate(`/admin/posts/${newPost.id}`);
+      } else if (postId) {
+        // 기존 게시물 수정
+        await updatePost(postId, postData);
+        setIsEditMode(false);
+        alert('게시물이 성공적으로 업데이트되었습니다.');
+      }
     } catch (error) {
-      console.error('게시물 업데이트 오류:', error);
-      alert(`게시물 업데이트 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      console.error('게시물 저장 오류:', error);
+      alert(`게시물 저장 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
-  }, [postId, formData, updatePost]);
+  }, [postId, formData, updatePost, createPost, isCreateMode, navigate]);
   
   // 게시물 삭제 핸들러
   const handleDeletePost = useCallback(async () => {
@@ -135,8 +152,8 @@ const PostDetail: React.FC = () => {
     navigate('/admin/posts');
   }, [navigate]);
   
-  // 로딩 중 표시
-  if (postDetailLoading) {
+  // 로딩 중 표시 (생성 모드에서는 표시하지 않음)
+  if (postDetailLoading && !isCreateMode) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center space-x-2">
@@ -150,8 +167,8 @@ const PostDetail: React.FC = () => {
     );
   }
   
-  // 오류 표시
-  if (postDetailError) {
+  // 오류 표시 (생성 모드에서는 표시하지 않음)
+  if (postDetailError && !isCreateMode) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center space-x-2 text-red-500">
@@ -166,8 +183,8 @@ const PostDetail: React.FC = () => {
     );
   }
   
-  // 게시물이 없는 경우
-  if (!postDetail) {
+  // 게시물이 없는 경우 (생성 모드에서는 표시하지 않음)
+  if (!postDetail && !isCreateMode) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg font-medium text-gray-500">
@@ -182,7 +199,9 @@ const PostDetail: React.FC = () => {
       {/* 헤더 */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-800">게시물 상세</h2>
+          <h2 className="text-xl font-bold text-gray-800">
+            {isCreateMode ? '새 게시물 작성' : '게시물 상세'}
+          </h2>
           <div className="flex space-x-2">
             <button
               type="button"
@@ -191,7 +210,7 @@ const PostDetail: React.FC = () => {
             >
               목록으로
             </button>
-            {!isEditMode && (
+            {!isEditMode && !isCreateMode && (
               <>
                 <button
                   type="button"
@@ -215,8 +234,8 @@ const PostDetail: React.FC = () => {
       
       {/* 게시물 내용 */}
       <div className="p-6">
-        {isEditMode ? (
-          // 수정 폼
+        {isEditMode || isCreateMode ? (
+          // 수정/생성 폼
           <form onSubmit={handleSubmitEdit} className="space-y-6">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">
@@ -308,7 +327,7 @@ const PostDetail: React.FC = () => {
                 type="submit"
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                저장
+                {isCreateMode ? '게시물 생성' : '저장'}
               </button>
             </div>
           </form>
@@ -316,16 +335,16 @@ const PostDetail: React.FC = () => {
           // 게시물 상세 보기
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{postDetail.title}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{postDetail?.title}</h1>
               <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
                 <div>
-                  <span className="font-medium">작성자:</span> {postDetail.author.name}
+                  <span className="font-medium">작성자:</span> {postDetail?.author.name}
                 </div>
                 <div>
-                  <span className="font-medium">작성일:</span> {formatDateTime(postDetail.date)}
+                  <span className="font-medium">작성일:</span> {formatDateTime(postDetail?.date || '')}
                 </div>
                 <div>
-                  <span className="font-medium">최종 수정일:</span> {formatDateTime(postDetail.date)}
+                  <span className="font-medium">최종 수정일:</span> {formatDateTime(postDetail?.date || '')}
                 </div>
                 <div>
                   <span className="font-medium">조회수:</span> {0}
@@ -335,9 +354,9 @@ const PostDetail: React.FC = () => {
             
             <div className="flex flex-wrap gap-2">
               <div className="px-2 py-1 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
-                {postDetail.category || '카테고리 없음'}
+                {postDetail?.category || '카테고리 없음'}
               </div>
-              {postDetail.tags && postDetail.tags.map((tag, index) => (
+              {postDetail?.tags && postDetail.tags.map((tag, index) => (
                 <div key={index} className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
                   #{tag}
                 </div>
@@ -346,7 +365,7 @@ const PostDetail: React.FC = () => {
             
             <div className="py-4 border-t border-b border-gray-200">
               <div className="prose max-w-none">
-                {postDetail.content}
+                {postDetail?.content}
               </div>
             </div>
             
@@ -364,7 +383,7 @@ const PostDetail: React.FC = () => {
                   </div>
                   <div className="flex">
                     <dt className="w-32 font-medium text-gray-500">댓글 수:</dt>
-                    <dd className="text-gray-900">{postDetail.comments || 0}</dd>
+                    <dd className="text-gray-900">{postDetail?.comments || 0}</dd>
                   </div>
                   <div className="flex">
                     <dt className="w-32 font-medium text-gray-500">좋아요 수:</dt>
@@ -372,12 +391,12 @@ const PostDetail: React.FC = () => {
                   </div>
                   <div className="flex">
                     <dt className="w-32 font-medium text-gray-500">게시물 ID:</dt>
-                    <dd className="text-gray-900">{postDetail.id}</dd>
+                    <dd className="text-gray-900">{postDetail?.id}</dd>
                   </div>
                 </dl>
               </div>
               
-              {postDetail.editHistory && postDetail.editHistory.length > 0 && (
+              {postDetail?.editHistory && postDetail.editHistory.length > 0 && (
                 <div className="p-4 bg-gray-50 rounded-md">
                   <h3 className="text-lg font-medium text-gray-900">수정 이력</h3>
                   <ul className="mt-2 space-y-2">

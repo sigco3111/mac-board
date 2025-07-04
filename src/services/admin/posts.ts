@@ -20,6 +20,7 @@ import {
   writeBatch,
   runTransaction,
   serverTimestamp,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { isAdminAuthenticated } from './auth';
@@ -437,5 +438,79 @@ export const fetchPostStatsAdmin = async () => {
   } catch (error) {
     console.error('게시물 통계 조회 오류:', error);
     throw new Error(`게시물 통계 정보를 가져오는 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+  }
+}; 
+
+/**
+ * 새 게시물 생성 함수
+ * @param postData 생성할 게시물 데이터
+ * @param adminId 관리자 ID
+ * @returns 생성된 게시물 정보
+ */
+export const createPostAdmin = async (
+  postInput: Partial<Post> | Partial<UIPost>,
+  adminId: string
+): Promise<UIPost> => {
+  if (!isAdminAuthenticated()) {
+    throw new Error('관리자 권한이 필요합니다.');
+  }
+
+  try {
+    // 현재 시간 생성
+    const now = Timestamp.now();
+    
+    // 게시물 컬렉션 참조
+    const postsRef = collection(db, 'posts');
+    
+    // 새 게시물 데이터 구성
+    const newPostData: Partial<Post> = {
+      title: postInput.title || '제목 없음',
+      content: postInput.content || '',
+      category: postInput.category || 'general',
+      tags: Array.isArray(postInput.tags) ? postInput.tags : [],
+      author: {
+        name: '관리자'
+      },
+      authorId: adminId,
+      createdAt: now,
+      updatedAt: now,
+      commentCount: 0,
+      viewCount: 0
+    };
+    
+    // Firestore에 새 게시물 추가
+    const docRef = await addDoc(postsRef, newPostData);
+    
+    // 생성된 게시물 ID로 문서 다시 조회
+    const postSnap = await getDoc(docRef);
+    
+    if (!postSnap.exists()) {
+      throw new Error('게시물 생성 후 조회 실패');
+    }
+    
+    // 문서 데이터와 ID를 결합하여 Post 객체 생성
+    const docData = postSnap.data();
+    const post: Post = {
+      id: postSnap.id,
+      title: docData.title || '제목 없음',
+      content: docData.content || '',
+      category: docData.category || 'general',
+      author: {
+        name: docData.author?.name || '관리자'
+      },
+      authorId: docData.authorId || adminId,
+      tags: docData.tags || [],
+      createdAt: docData.createdAt || now,
+      updatedAt: docData.updatedAt || now,
+      commentCount: docData.commentCount || 0,
+      viewCount: docData.viewCount || 0,
+      isNew: true
+    };
+    
+    // UI 표시용 게시물 데이터로 변환
+    return convertToUIPost(post);
+  } catch (error) {
+    console.error('게시물 생성 오류:', error);
+    throw error instanceof Error ? error : new Error('게시물 생성 중 오류가 발생했습니다.');
   }
 }; 
