@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import TrafficLights from './TrafficLights';
+import Dashboard from './Dashboard';
 
 // 기본 배경화면 경로
 const DEFAULT_WALLPAPER = '/assets/wallpapers/default.jpg';
@@ -195,10 +196,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const renderDashboardTab = () => {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">대시보드 설정</h3>
-        <p className="text-sm text-gray-500">
-          현재 대시보드 설정 옵션은 개발 중입니다.
-        </p>
+        <h3 className="text-lg font-semibold">대시보드</h3>
+        <Dashboard />
       </div>
     );
   };
@@ -219,12 +218,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
         
         {/* 설정 내용 */}
-        <div className="flex h-96">
+        <div className="flex h-[500px]">
           {/* 사이드바 */}
-          <div className="w-48 border-r border-gray-200 p-3 space-y-2">
+          <div className="w-36 border-r border-gray-200 p-2 space-y-1">
             <button
               onClick={() => setActiveTab('wallpaper')}
-              className={`w-full text-left px-3 py-2 rounded-md ${
+              className={`w-full text-left px-2 py-1 rounded-md text-sm ${
                 activeTab === 'wallpaper' 
                   ? 'bg-blue-500 text-white' 
                   : 'hover:bg-gray-100 text-gray-800'
@@ -234,7 +233,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`w-full text-left px-3 py-2 rounded-md ${
+              className={`w-full text-left px-2 py-1 rounded-md text-sm ${
                 activeTab === 'dashboard' 
                   ? 'bg-blue-500 text-white' 
                   : 'hover:bg-gray-100 text-gray-800'
@@ -245,7 +244,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
           
           {/* 내용 영역 */}
-          <div className="flex-1 p-5 overflow-y-auto">
+          <div className="flex-1 p-3 overflow-y-auto">
             {activeTab === 'wallpaper' ? renderWallpaperTab() : renderDashboardTab()}
           </div>
         </div>

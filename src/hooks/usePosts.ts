@@ -6,7 +6,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   fetchPosts, 
   fetchPostsByCategory, 
-  fetchPostsByTag 
+  fetchPostsByTag,
+  fetchPostsByDateRange,
+  fetchUpdatedPostsByDateRange
 } from '../services/firebase/firestore';
 import type { UIPost } from '../types/index';
 
@@ -19,15 +21,20 @@ interface PostsState {
 interface UsePostsOptions {
   category?: string;
   tag?: string;
+  dateRange?: {
+    startDate: string;
+    endDate: string;
+    type?: 'created' | 'updated';
+  };
 }
 
 /**
  * 게시물 데이터를 관리하는 커스텀 훅
- * @param options 게시물 조회 옵션 (카테고리, 태그 등)
+ * @param options 게시물 조회 옵션 (카테고리, 태그, 날짜 범위 등)
  * @returns 게시물 목록, 로딩 상태, 에러 상태 및 새로고침 함수
  */
 export const usePosts = (options: UsePostsOptions = {}): PostsState & { refresh: () => Promise<void> } => {
-  const { category, tag } = options;
+  const { category, tag, dateRange } = options;
   const [state, setState] = useState<PostsState>({
     posts: [],
     loading: true,
@@ -41,7 +48,15 @@ export const usePosts = (options: UsePostsOptions = {}): PostsState & { refresh:
       
       let posts: UIPost[];
       
-      if (tag) {
+      if (dateRange) {
+        // 날짜 범위로 필터링
+        const { startDate, endDate, type = 'created' } = dateRange;
+        if (type === 'updated') {
+          posts = await fetchUpdatedPostsByDateRange(startDate, endDate);
+        } else {
+          posts = await fetchPostsByDateRange(startDate, endDate);
+        }
+      } else if (tag) {
         // 태그로 필터링
         posts = await fetchPostsByTag(tag);
       } else if (category && category !== 'all') {
@@ -65,7 +80,7 @@ export const usePosts = (options: UsePostsOptions = {}): PostsState & { refresh:
         error: error instanceof Error ? error : new Error('게시물을 가져오는 중 오류가 발생했습니다.'),
       });
     }
-  }, [category, tag]);
+  }, [category, tag, dateRange]);
 
   // 컴포넌트 마운트 시 또는 의존성 변경 시 게시물 조회
   useEffect(() => {

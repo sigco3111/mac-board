@@ -798,3 +798,109 @@ export const fetchBookmarkedPosts = async (userId: string): Promise<UIPost[]> =>
   
   throw new Error(`북마크 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
 }; 
+
+/**
+ * 특정 기간 내에 생성된 게시물을 조회하는 함수
+ * @param startDate 시작 날짜 (ISO 문자열)
+ * @param endDate 종료 날짜 (ISO 문자열)
+ * @returns 조회된 게시물 목록
+ */
+export const fetchPostsByDateRange = async (startDate: string, endDate: string): Promise<UIPost[]> => {
+  let attempts = 0;
+  
+  while (attempts < MAX_RETRY_COUNT) {
+    try {
+      attempts++;
+      
+      // ISO 문자열을 Timestamp로 변환
+      const startTimestamp = Timestamp.fromDate(new Date(startDate));
+      const endTimestamp = Timestamp.fromDate(new Date(endDate));
+      
+      const q = query(
+        collection(db, POSTS_COLLECTION),
+        where('createdAt', '>=', startTimestamp),
+        where('createdAt', '<=', endTimestamp),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const posts = querySnapshot.docs.map(mapDocToPost);
+      
+      return posts.map(convertToUIPost);
+    } catch (error: any) {
+      console.error(`기간 내 게시물 조회 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
+      
+      // Firebase 인덱스 오류 처리
+      if (error.code === 'failed-precondition' || error.message?.includes('requires an index')) {
+        const indexUrl = error.message?.match(/https:\/\/console\.firebase\.google\.com[^\s"]*/)?.[0];
+        const indexMessage = indexUrl 
+          ? `Firebase 복합 인덱스가 필요합니다. 다음 링크에서 인덱스를 생성해주세요: ${indexUrl}`
+          : 'Firebase 복합 인덱스가 필요합니다. Firebase 콘솔에서 인덱스를 생성해주세요.';
+        
+        console.error(indexMessage);
+        throw new Error(`기간 조회를 위한 ${indexMessage}`);
+      }
+      
+      if (attempts >= MAX_RETRY_COUNT) {
+        throw new Error(`기간 내 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
+      }
+      
+      await delay(attempts);
+    }
+  }
+  
+  throw new Error(`기간 내 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
+};
+
+/**
+ * 특정 기간 내에 수정된 게시물을 조회하는 함수
+ * @param startDate 시작 날짜 (ISO 문자열)
+ * @param endDate 종료 날짜 (ISO 문자열)
+ * @returns 조회된 게시물 목록
+ */
+export const fetchUpdatedPostsByDateRange = async (startDate: string, endDate: string): Promise<UIPost[]> => {
+  let attempts = 0;
+  
+  while (attempts < MAX_RETRY_COUNT) {
+    try {
+      attempts++;
+      
+      // ISO 문자열을 Timestamp로 변환
+      const startTimestamp = Timestamp.fromDate(new Date(startDate));
+      const endTimestamp = Timestamp.fromDate(new Date(endDate));
+      
+      const q = query(
+        collection(db, POSTS_COLLECTION),
+        where('updatedAt', '>=', startTimestamp),
+        where('updatedAt', '<=', endTimestamp),
+        orderBy('updatedAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const posts = querySnapshot.docs.map(mapDocToPost);
+      
+      return posts.map(convertToUIPost);
+    } catch (error: any) {
+      console.error(`기간 내 수정 게시물 조회 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
+      
+      // Firebase 인덱스 오류 처리
+      if (error.code === 'failed-precondition' || error.message?.includes('requires an index')) {
+        const indexUrl = error.message?.match(/https:\/\/console\.firebase\.google\.com[^\s"]*/)?.[0];
+        const indexMessage = indexUrl 
+          ? `Firebase 복합 인덱스가 필요합니다. 다음 링크에서 인덱스를 생성해주세요: ${indexUrl}`
+          : 'Firebase 복합 인덱스가 필요합니다. Firebase 콘솔에서 인덱스를 생성해주세요.';
+        
+        console.error(indexMessage);
+        throw new Error(`수정된 게시물 조회를 위한 ${indexMessage}`);
+      }
+      
+      if (attempts >= MAX_RETRY_COUNT) {
+        throw new Error(`기간 내 수정 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
+      }
+      
+      await delay(attempts);
+    }
+  }
+  
+  throw new Error(`기간 내 수정 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
+}; 
