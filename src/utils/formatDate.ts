@@ -4,77 +4,141 @@
  */
 
 /**
- * ISO 문자열 날짜를 사용자 친화적인 형식으로 변환
- * 예: '2023-05-15T14:30:00Z' -> '2023년 5월 15일'
+ * 날짜를 YYYY-MM-DD 형식으로 포맷팅하는 함수
+ * @param date 포맷팅할 날짜 객체 또는 날짜 문자열
+ * @returns 포맷팅된 날짜 문자열
  */
-export const formatDate = (isoString: string): string => {
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch (error) {
-    console.error('날짜 포맷팅 오류:', error);
-    return '날짜 정보 없음';
+export const formatDate = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // 유효한 날짜인지 확인
+  if (isNaN(dateObj.getTime())) {
+    console.error('유효하지 않은 날짜:', date);
+    return '날짜 오류';
   }
+  
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 };
 
 /**
- * ISO 문자열 날짜를 상대적인 시간으로 변환
- * 예: '1시간 전', '3일 전', '방금 전'
+ * 날짜를 YYYY-MM-DD HH:MM 형식으로 포맷팅하는 함수
+ * @param date 포맷팅할 날짜 객체 또는 날짜 문자열
+ * @returns 포맷팅된 날짜와 시간 문자열
  */
-export const formatRelativeTime = (isoString: string): string => {
-  try {
-    const date = new Date(isoString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    
-    // 시간 차이 계산 (밀리초 기준)
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
-    const diffMonth = Math.floor(diffDay / 30);
-    const diffYear = Math.floor(diffMonth / 12);
-    
-    // 상대적 시간 표시
-    if (diffYear > 0) {
-      return `${diffYear}년 전`;
-    } else if (diffMonth > 0) {
-      return `${diffMonth}개월 전`;
-    } else if (diffDay > 0) {
-      return `${diffDay}일 전`;
-    } else if (diffHour > 0) {
-      return `${diffHour}시간 전`;
-    } else if (diffMin > 0) {
-      return `${diffMin}분 전`;
-    } else {
-      return '방금 전';
-    }
-  } catch (error) {
-    console.error('상대적 시간 변환 오류:', error);
-    return '시간 정보 없음';
+export const formatDateTime = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // 유효한 날짜인지 확인
+  if (isNaN(dateObj.getTime())) {
+    console.error('유효하지 않은 날짜:', date);
+    return '날짜 오류';
   }
+  
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const hours = String(dateObj.getHours()).padStart(2, '0');
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
 
 /**
- * ISO 문자열 날짜를 시간 포함 형식으로 변환
- * 예: '2023-05-15T14:30:00Z' -> '2023년 5월 15일 14:30'
+ * 날짜를 상대적 시간으로 포맷팅하는 함수 (예: '3일 전', '방금 전')
+ * @param date 포맷팅할 날짜 객체 또는 날짜 문자열
+ * @returns 상대적 시간 문자열
  */
-export const formatDateTime = (isoString: string): string => {
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch (error) {
-    console.error('날짜 및 시간 포맷팅 오류:', error);
-    return '날짜 정보 없음';
+export const formatRelativeTime = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // 유효한 날짜인지 확인
+  if (isNaN(dateObj.getTime())) {
+    console.error('유효하지 않은 날짜:', date);
+    return '날짜 오류';
   }
+  
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+  
+  // 1분 미만
+  if (diffInSeconds < 60) {
+    return '방금 전';
+  }
+  
+  // 1시간 미만
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes}분 전`;
+  }
+  
+  // 24시간 미만
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours}시간 전`;
+  }
+  
+  // 30일 미만
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return `${diffInDays}일 전`;
+  }
+  
+  // 12개월 미만
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths}개월 전`;
+  }
+  
+  // 1년 이상
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears}년 전`;
+};
+
+/**
+ * 날짜를 한국어 형식으로 포맷팅하는 함수 (예: '2023년 5월 15일')
+ * @param date 포맷팅할 날짜 객체 또는 날짜 문자열
+ * @returns 한국어 형식의 날짜 문자열
+ */
+export const formatKoreanDate = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // 유효한 날짜인지 확인
+  if (isNaN(dateObj.getTime())) {
+    console.error('유효하지 않은 날짜:', date);
+    return '날짜 오류';
+  }
+  
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+  
+  return `${year}년 ${month}월 ${day}일`;
+};
+
+/**
+ * 두 날짜 사이의 일수를 계산하는 함수
+ * @param startDate 시작 날짜
+ * @param endDate 종료 날짜 (기본값: 현재 날짜)
+ * @returns 두 날짜 사이의 일수
+ */
+export const daysBetween = (startDate: Date | string, endDate: Date | string = new Date()): number => {
+  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  
+  // 유효한 날짜인지 확인
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    console.error('유효하지 않은 날짜:', { startDate, endDate });
+    return 0;
+  }
+  
+  // 시간 부분을 제거하고 날짜만 비교
+  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  
+  // 밀리초를 일로 변환 (1일 = 24시간 * 60분 * 60초 * 1000밀리초)
+  return Math.floor((endUtc - startUtc) / (24 * 60 * 60 * 1000));
 }; 
