@@ -8,9 +8,17 @@ import { FolderIcon, SettingsIcon } from './icons';
 import HelpModal from './HelpModal';
 import BulletinBoard from './BulletinBoard';
 import { User } from '../src/types';
+import SettingsModal from './SettingsModal';
 
 // 로그아웃 상태를 저장하기 위한 로컬 스토리지 키
 const LOGOUT_FLAG_KEY = 'mac_board_force_logout';
+// 배경화면 저장을 위한 로컬 스토리지 키
+const WALLPAPER_KEY = 'mac_board_wallpaper';
+const WALLPAPER_TYPE_KEY = 'mac_board_wallpaper_type';
+// 기본 배경화면 경로
+const DEFAULT_WALLPAPER = '/assets/wallpapers/default.jpg';
+// 대체 배경색
+const FALLBACK_BG_COLOR = '#1E3A8A'; // 짙은 파란색
 
 /**
  * Desktop 컴포넌트 속성
@@ -30,14 +38,37 @@ interface DesktopProps {
 const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
+  const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [isBoardOpen, setIsBoardOpen] = useState<boolean>(false);
   const [showBookmarks, setShowBookmarks] = useState<boolean>(false);
+  const [wallpaper, setWallpaper] = useState<string>(() => {
+    // 로컬 스토리지에서 저장된 배경화면 타입 확인
+    const type = localStorage.getItem(WALLPAPER_TYPE_KEY);
+    
+    if (type === 'default' || !type) {
+      return DEFAULT_WALLPAPER;
+    } else {
+      // 사용자 지정 배경화면 (Base64 인코딩된 이미지)
+      return localStorage.getItem(WALLPAPER_KEY) || DEFAULT_WALLPAPER;
+    }
+  });
+  const [defaultImageError, setDefaultImageError] = useState<boolean>(false);
+
+  // 기본 이미지 로딩 오류 감지
+  useEffect(() => {
+    if (wallpaper === DEFAULT_WALLPAPER) {
+      const img = new Image();
+      img.onload = () => setDefaultImageError(false);
+      img.onerror = () => setDefaultImageError(true);
+      img.src = DEFAULT_WALLPAPER;
+    }
+  }, [wallpaper]);
 
   // 데스크톱 아이템 정의
   const desktopItems = [
     { id: 'bulletin-board', name: '게시판', Icon: FolderIcon, onOpen: handleOpenBoard, color: 'text-sky-400' },
     { id: 'bookmark', name: '북마크', Icon: FolderIcon, onOpen: handleOpenBookmarks, color: 'text-sky-400' },
-    { id: 'settings', name: '설정', Icon: SettingsIcon, onOpen: () => {}, color: 'text-gray-500' },
+    { id: 'settings', name: '설정', Icon: SettingsIcon, onOpen: handleOpenSettings, color: 'text-gray-500' },
   ];
   
   /**
@@ -66,12 +97,39 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
     setIsBoardOpen(true);
     onOpenBoard();
   }
+
+  /**
+   * 설정 모달 열기 핸들러
+   */
+  function handleOpenSettings() {
+    setSettingsModalOpen(true);
+  }
   
   /**
    * 게시판 닫기 핸들러
    */
   const handleCloseBoard = () => {
     setIsBoardOpen(false);
+  };
+
+  /**
+   * 배경화면 변경 핸들러
+   */
+  const handleWallpaperChange = (wallpaperUrl: string) => {
+    if (wallpaperUrl) {
+      // 사용자 지정 배경화면으로 설정
+      setWallpaper(wallpaperUrl);
+      setDefaultImageError(false);
+    } else {
+      // 빈 값이면 기본 배경화면으로 초기화
+      setWallpaper(DEFAULT_WALLPAPER);
+      
+      // 기본 이미지 로딩 확인
+      const img = new Image();
+      img.onload = () => setDefaultImageError(false);
+      img.onerror = () => setDefaultImageError(true);
+      img.src = DEFAULT_WALLPAPER;
+    }
   };
   
   /**
@@ -109,8 +167,22 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
     return () => clearInterval(interval);
   }, [onLogout]);
 
+  // 배경화면 스타일 결정
+  const bgStyle = defaultImageError || (wallpaper === DEFAULT_WALLPAPER && defaultImageError) ? 
+    { backgroundColor: FALLBACK_BG_COLOR } : 
+    { 
+      backgroundImage: `url(${wallpaper})`, 
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    };
+
   return (
-    <div className="w-screen h-screen" onClick={() => setSelectedId(null)}>
+    <div 
+      className="w-screen h-screen" 
+      onClick={() => setSelectedId(null)}
+      style={bgStyle}
+    >
       {/* 상단 메뉴바 */}
       <MenuBar 
         onOpenHelp={() => setHelpModalOpen(true)}
@@ -141,6 +213,13 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
       
       {/* 모달 컴포넌트들 */}
       {isHelpModalOpen && <HelpModal isOpen={isHelpModalOpen} onClose={() => setHelpModalOpen(false)} />}
+      {isSettingsModalOpen && (
+        <SettingsModal 
+          isOpen={isSettingsModalOpen} 
+          onClose={() => setSettingsModalOpen(false)}
+          onWallpaperChange={handleWallpaperChange}
+        />
+      )}
       
       {/* 게시판 앱 창 */}
       {isBoardOpen && (
