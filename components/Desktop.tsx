@@ -75,40 +75,89 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
    * 게시판 열기 핸들러
    */
   function handleOpenBoard() {
-    // 이미 게시판이 열려있으면 다시 열지 않음
-    if (isBoardOpen) return;
-    
-    setShowBookmarks(false);
-    setIsBoardOpen(true);
-    onOpenBoard();
+    // 선택 및 포커스 관련 정리 - 비동기적으로 처리됨
+    clearSelectionAndFocus();
+
+    // 상태 변경을 위한 타임아웃 설정
+    setTimeout(() => {
+      if (isBoardOpen) {
+        // 이미 게시판이 열려있으면 닫고 다시 열기
+        setIsBoardOpen(false);
+        
+        // 약간의 지연 후 다시 열기
+        setTimeout(() => {
+          setShowBookmarks(false);
+          setIsBoardOpen(true);
+          onOpenBoard();
+        }, 50);
+      } else {
+        // 게시판이 닫혀있으면 게시판 열기
+        setShowBookmarks(false);
+        setIsBoardOpen(true);
+        onOpenBoard();
+      }
+    }, 10);
   }
 
   /**
    * 북마크 게시판 열기 핸들러
    */
   function handleOpenBookmarks() {
-    // 이미 게시판이 열려있으면 다시 열지 않음
-    if (isBoardOpen) {
-      setShowBookmarks(true);
-      return;
-    }
+    // 선택 및 포커스 관련 정리 - 비동기적으로 처리됨
+    clearSelectionAndFocus();
     
-    setShowBookmarks(true);
-    setIsBoardOpen(true);
-    onOpenBoard();
+    // 상태 변경을 위한 타임아웃 설정
+    setTimeout(() => {
+      if (isBoardOpen) {
+        // 이미 게시판이 열려있으면 닫고 다시 열기
+        setIsBoardOpen(false);
+        
+        // 약간의 지연 후 다시 열기
+        setTimeout(() => {
+          setShowBookmarks(true);
+          setIsBoardOpen(true);
+          onOpenBoard();
+        }, 50);
+      } else {
+        // 게시판이 닫혀있으면 게시판 열고 북마크 모드 설정
+        setShowBookmarks(true);
+        setIsBoardOpen(true);
+        onOpenBoard();
+      }
+    }, 10);
   }
 
   /**
    * 설정 모달 열기 핸들러
    */
   function handleOpenSettings() {
+    clearSelectionAndFocus();
     setSettingsModalOpen(true);
   }
+
+  // Selection API 에러 방지를 위한 전역 이벤트 리스너 설정
+  useEffect(() => {
+    // mousedown 이벤트 발생 시 Selection 초기화
+    const handleMouseDown = () => {
+      // 안전하게 Selection 및 포커스 정리
+      clearSelectionAndFocus();
+    };
+
+    // 전체 문서에 이벤트 리스너 등록 - 캡처 모드 활용
+    document.addEventListener('mousedown', handleMouseDown, { capture: true, passive: true });
+
+    // 컴포넌트 언마운트 시 이벤트 리스너 제거
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown, { capture: true });
+    };
+  }, []);
   
   /**
    * 게시판 닫기 핸들러
    */
   const handleCloseBoard = () => {
+    // 선택 및 포커스 초기화
+    clearSelectionAndFocus();
     setIsBoardOpen(false);
   };
 
@@ -166,6 +215,39 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
     
     return () => clearInterval(interval);
   }, [onLogout]);
+
+  /**
+   * Selection 및 포커스 정리 함수
+   */
+  const clearSelectionAndFocus = () => {
+    try {
+      // 비동기적으로 실행하여 React 렌더링 중 발생할 수 있는 충돌 방지
+      setTimeout(() => {
+        try {
+          // 현재 활성화된 요소에서 포커스 제거
+          if (document.activeElement && document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+
+          // 텍스트 선택 초기화
+          const selection = window.getSelection();
+          if (selection) {
+            if (typeof selection.empty === 'function') {
+              selection.empty();
+            } else if (typeof selection.removeAllRanges === 'function') {
+              selection.removeAllRanges();
+            }
+          }
+        } catch (innerError) {
+          // 내부 에러 무시 - 렌더링 흐름을 방해하지 않음
+          console.error("내부 Selection API 에러 처리:", innerError);
+        }
+      }, 0);
+    } catch (error) {
+      // 외부 에러 처리 (무시)
+      console.error("Selection API 에러 처리:", error);
+    }
+  };
 
   // 배경화면 스타일 결정
   const bgStyle = defaultImageError || (wallpaper === DEFAULT_WALLPAPER && defaultImageError) ? 

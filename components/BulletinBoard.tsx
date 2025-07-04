@@ -61,6 +61,72 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     setToast(prev => ({ ...prev, visible: false }));
   }, []);
 
+  // Selection API 관련 에러 처리를 위한 함수
+  const clearSelection = useCallback(() => {
+    try {
+      // 현재 활성화된 요소에서 포커스 제거
+      if (document.activeElement && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
+      // 텍스트 선택 초기화 - 다양한 브라우저 지원
+      const selection = window.getSelection();
+      if (selection) {
+        if (typeof selection.empty === 'function') {
+          // Chrome, Safari
+          selection.empty();
+        } else if (typeof selection.removeAllRanges === 'function') {
+          // Firefox
+          selection.removeAllRanges();
+        }
+        // IE 지원 코드 제거 (더 이상 필요하지 않음)
+      }
+      
+      // 현재 활성 요소가 있다면 블러 처리
+      document.activeElement instanceof HTMLElement && document.activeElement.blur();
+      
+    } catch (error) {
+      // 에러가 발생해도 앱 실행에 영향을 주지 않도록 함
+      console.error("Selection API 에러 처리 중 오류:", error);
+    }
+  }, []);
+  
+  // 컴포넌트 마운트/언마운트 시 Selection API 관리 강화
+  useEffect(() => {
+    // 컴포넌트 마운트 시 Selection API 초기화 강화
+    const disableSelection = () => {
+      try {
+        // document selection 비활성화
+        document.onselectstart = () => false;
+        
+        // 표준 CSS 속성 사용
+        document.body.style.userSelect = 'none';
+        
+        clearSelection();
+      } catch (error) {
+        console.error("Selection 비활성화 중 오류:", error);
+      }
+    };
+    
+    const enableSelection = () => {
+      try {
+        // document selection 활성화 복원
+        document.onselectstart = null;
+        
+        // 표준 CSS 속성 사용
+        document.body.style.userSelect = '';
+      } catch (error) {
+        console.error("Selection 활성화 중 오류:", error);
+      }
+    };
+    
+    // 마운트 시 실행
+    disableSelection();
+    
+    // 언마운트 시 원상복구
+    return enableSelection;
+  }, [clearSelection]);
+
   // 북마크 관련 기능 가져오기
   const { 
     bookmarkedPosts, 
@@ -83,12 +149,39 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   // 초기 북마크 설정
   useEffect(() => {
     if (initialShowBookmarks) {
-      setShowBookmarks(true);
-      setSelectedCategory('all');
-      setSelectedTag(null);
-      refreshBookmarks();
+      // 선택 초기화
+      clearSelection();
+      
+      // 안전한 상태 전환을 위해 단계적으로 처리
+      setTimeout(() => {
+        // 먼저 카테고리와 태그 초기화
+        setSelectedCategory('all');
+        setSelectedTag(null);
+        
+        // 약간의 지연 후 북마크 모드 활성화
+        setTimeout(() => {
+          setShowBookmarks(true);
+          refreshBookmarks();
+        }, 50);
+      }, 10);
     }
-  }, [initialShowBookmarks, refreshBookmarks]);
+  }, [initialShowBookmarks, refreshBookmarks, clearSelection]);
+
+  // Selection API 에러 방지를 위한 전역 이벤트 리스너 설정
+  useEffect(() => {
+    // mousedown 이벤트 발생 시 Selection 초기화
+    const handleMouseDown = () => {
+      clearSelection();
+    };
+
+    // 전체 문서에 이벤트 리스너 등록
+    document.addEventListener('mousedown', handleMouseDown);
+
+    // 컴포넌트 언마운트 시 이벤트 리스너 제거
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [clearSelection]);
 
   // 표시할 게시물 결정
   const posts = useMemo(() => {
@@ -174,18 +267,39 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
 
   // 북마크 필터링 토글 처리
   const handleToggleBookmarks = useCallback(() => {
-    if (!showBookmarks) {
-      // 북마크 모드로 전환
-      setShowBookmarks(true);
-      setSelectedCategory('all');
-      setSelectedTag(null);
-      setSelectedPost(null);
-      refreshBookmarks();
-    } else {
-      // 북마크 모드 해제
-      setShowBookmarks(false);
-    }
-  }, [showBookmarks, refreshBookmarks]);
+    // 선택 초기화
+    clearSelection();
+    
+    // 북마크 모드 전환 전에 현재 상태 저장
+    const currentBookmarksState = showBookmarks;
+    
+    // 안전한 상태 전환을 위해 모든 상태 초기화
+    setShowBookmarks(false);
+    
+    // 약간의 지연 후 상태 복원 및 전환
+    setTimeout(() => {
+      // 이전 상태의 반대로 북마크 모드 설정
+      setShowBookmarks(!currentBookmarksState);
+      
+      if (!currentBookmarksState) {
+        // 북마크 모드로 전환
+        setSelectedCategory('all');
+        setSelectedTag(null);
+        refreshBookmarks();
+      }
+    }, 50);
+  }, [showBookmarks, refreshBookmarks, clearSelection]);
+
+  // 컴포넌트 마운트/언마운트 시 Selection API 관리
+  useEffect(() => {
+    // 컴포넌트 마운트 시 Selection 초기화
+    clearSelection();
+    
+    // 컴포넌트 언마운트 시 Selection 초기화
+    return () => {
+      clearSelection();
+    };
+  }, [clearSelection]);
 
   // 게시물 데이터 새로고침 통합 함수
   const refreshPostData = useCallback(() => {
@@ -297,31 +411,47 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
 
   // 북마크 모드에서 카테고리 선택 처리
   const handleSelectCategory = useCallback((categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setSelectedTag(null); // 태그 선택 초기화
+    // 선택 초기화
+    clearSelection();
     
-    // 북마크 모드가 아닐 때만 북마크 모드 해제
-    if (!showBookmarks) {
+    // 현재 상태 저장
+    const wasInBookmarkMode = showBookmarks;
+    
+    // 모든 상태 초기화
+    if (wasInBookmarkMode) {
       setShowBookmarks(false);
     }
     
-    // 카테고리 변경 시 선택된 게시물 초기화
-    setSelectedPost(null);
-  }, [showBookmarks]);
+    // 약간의 지연 후 새 상태 설정
+    setTimeout(() => {
+      setSelectedCategory(categoryId);
+      setSelectedTag(null); // 태그 선택 초기화
+      
+      // 카테고리 변경 시 선택된 게시물 초기화 처리는 useEffect에서 자동으로 처리됨
+    }, 50);
+  }, [showBookmarks, clearSelection]);
 
   // 북마크 모드에서 태그 선택 처리
   const handleSelectTag = useCallback((tag: string | null) => {
-    setSelectedTag(tag); // 태그 선택 또는 해제
+    // 선택 초기화
+    clearSelection();
     
-    // 북마크 모드가 아닐 때만 카테고리를 all로 설정하고 북마크 모드 해제
-    if (!showBookmarks) {
-      setSelectedCategory('all');
+    // 현재 상태 저장
+    const wasInBookmarkMode = showBookmarks;
+    
+    // 모든 상태 초기화
+    if (wasInBookmarkMode) {
       setShowBookmarks(false);
     }
     
-    // 태그 변경 시 선택된 게시물 초기화
-    setSelectedPost(null);
-  }, [showBookmarks]);
+    // 약간의 지연 후 새 상태 설정
+    setTimeout(() => {
+      setSelectedTag(tag); // 태그 선택 또는 해제
+      setSelectedCategory('all'); // 카테고리 초기화
+      
+      // 태그 변경 시 선택된 게시물 초기화 처리는 useEffect에서 자동으로 처리됨
+    }, 50);
+  }, [showBookmarks, clearSelection]);
 
   const handleOpenNewPost = useCallback(() => {
     setPostToEdit(null);
