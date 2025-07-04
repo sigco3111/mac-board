@@ -14,7 +14,6 @@ interface SidebarProps {
   selectedTag: string | null;
   onSelectTag: (tag: string | null) => void;
   showBookmarks?: boolean; // 북마크 필터링 활성화 상태
-  onToggleBookmarks?: () => void; // 북마크 필터링 토글 함수
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -25,8 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   allTags, 
   selectedTag, 
   onSelectTag,
-  showBookmarks = false,
-  onToggleBookmarks 
+  showBookmarks = false
 }) => {
   // 인증 정보 가져오기
   const { user } = useAuth();
@@ -59,19 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [clearSelection]);
   
-  // 북마크 토글 핸들러 (에러 방지를 위한 처리 추가)
-  const handleToggleBookmarks = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    // 선택 초기화
-    clearSelection();
-    
-    if (onToggleBookmarks) {
-      // Selection 에러 방지를 위한 비동기 처리
-      setTimeout(() => {
-        onToggleBookmarks();
-      }, 10);
-    }
-  }, [onToggleBookmarks, clearSelection]);
+  // 북마크 토글 핸들러는 더 이상 필요하지 않으므로 제거
   
   // 카테고리 선택 핸들러 (에러 방지를 위한 처리 추가)
   const handleSelectCategory = useCallback((e: React.MouseEvent, categoryId: string) => {
@@ -111,20 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="w-60 flex-shrink-0 bg-slate-100/80 p-3 flex flex-col h-full backdrop-blur-md border-r border-slate-200">
-      {/* 북마크 토글 버튼 추가 */}
-      {onToggleBookmarks && (
-        <button
-          onClick={handleToggleBookmarks}
-          className={`w-full flex items-center space-x-3 text-sm font-medium p-2 mb-2 rounded-md transition-colors duration-150 ${
-            showBookmarks
-              ? 'bg-blue-500 text-white shadow'
-              : 'text-slate-700 hover:bg-slate-200'
-          }`}
-        >
-          <BookmarkIcon className={`w-5 h-5 ${showBookmarks ? 'text-white' : 'text-slate-500'}`} fill={showBookmarks ? 'currentColor' : 'none'} />
-          <span>북마크</span>
-        </button>
-      )}
+      {/* 북마크 토글 버튼 제거 */}
 
       <div className="text-xs font-semibold text-slate-500 px-3 pt-4 pb-2">카테고리</div>
       <nav>
@@ -134,12 +107,12 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 onClick={(e) => handleSelectCategory(e, category.id)}
                 className={`w-full flex items-center space-x-3 text-sm font-medium p-2 rounded-md transition-colors duration-150 ${
-                  selectedCategory === category.id && !selectedTag && !showBookmarks
+                  selectedCategory === category.id && !selectedTag
                     ? 'bg-blue-500 text-white shadow'
                     : 'text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                <span className={selectedCategory === category.id && !selectedTag && !showBookmarks ? 'text-white' : 'text-slate-500'}>
+                <span className={selectedCategory === category.id && !selectedTag ? 'text-white' : 'text-slate-500'}>
                   {category.icon}
                 </span>
                 <span>{category.name}</span>
@@ -157,12 +130,12 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 onClick={(e) => handleSelectTag(e, tag)}
                 className={`w-full flex items-center space-x-3 text-sm p-2 rounded-md transition-colors duration-150 ${
-                  selectedTag === tag && !showBookmarks
+                  selectedTag === tag
                     ? 'bg-blue-500 text-white shadow'
                     : 'text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                <HashtagIcon className={`w-4 h-4 flex-shrink-0 ${selectedTag === tag && !showBookmarks ? 'text-white/80' : 'text-slate-500'}`} />
+                <HashtagIcon className={`w-4 h-4 flex-shrink-0 ${selectedTag === tag ? 'text-white/80' : 'text-slate-500'}`} />
                 <span className="font-medium truncate">{tag}</span>
               </button>
             </li>

@@ -101,30 +101,34 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
 
   /**
    * 북마크 게시판 열기 핸들러
+   * 북마크 모드로 게시판을 열어 북마크된 게시물만 표시합니다.
    */
   function handleOpenBookmarks() {
     // 선택 및 포커스 관련 정리 - 비동기적으로 처리됨
     clearSelectionAndFocus();
     
-    // 상태 변경을 위한 타임아웃 설정
-    setTimeout(() => {
-      if (isBoardOpen) {
-        // 이미 게시판이 열려있으면 닫고 다시 열기
-        setIsBoardOpen(false);
-        
-        // 약간의 지연 후 다시 열기
-        setTimeout(() => {
-          setShowBookmarks(true);
-          setIsBoardOpen(true);
-          onOpenBoard();
-        }, 50);
-      } else {
-        // 게시판이 닫혀있으면 게시판 열고 북마크 모드 설정
+    // 현재 게시판이 열려있는지 확인
+    if (isBoardOpen) {
+      // 이미 게시판이 열려있으면 닫기
+      setIsBoardOpen(false);
+      
+      // 약간의 지연 후 북마크 모드로 다시 열기
+      setTimeout(() => {
+        // 먼저 북마크 모드 설정
         setShowBookmarks(true);
+        
+        // 게시판 열기
         setIsBoardOpen(true);
         onOpenBoard();
-      }
-    }, 10);
+      }, 100); // 충분한 지연시간 설정
+    } else {
+      // 북마크 모드 설정
+      setShowBookmarks(true);
+      
+      // 게시판 열기
+      setIsBoardOpen(true);
+      onOpenBoard();
+    }
   }
 
   /**

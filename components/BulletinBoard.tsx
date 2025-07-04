@@ -161,11 +161,23 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
         // 약간의 지연 후 북마크 모드 활성화
         setTimeout(() => {
           setShowBookmarks(true);
+          // 북마크 데이터 새로고침 (최신 상태 유지)
           refreshBookmarks();
         }, 50);
       }, 10);
     }
   }, [initialShowBookmarks, refreshBookmarks, clearSelection]);
+  
+  // 컴포넌트 재랜더링 시에도 북마크 설정이 유지되도록 추가
+  useEffect(() => {
+    // 컴포넌트 마운트 시 북마크 모드 상태 동기화
+    setShowBookmarks(initialShowBookmarks);
+    
+    if (initialShowBookmarks) {
+      // 북마크 데이터 로드
+      refreshBookmarks();
+    }
+  }, [initialShowBookmarks, refreshBookmarks]);
 
   // Selection API 에러 방지를 위한 전역 이벤트 리스너 설정
   useEffect(() => {
@@ -265,30 +277,9 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     setPosition({ x: initialX, y: initialY });
   }, []);
 
-  // 북마크 필터링 토글 처리
-  const handleToggleBookmarks = useCallback(() => {
-    // 선택 초기화
-    clearSelection();
-    
-    // 북마크 모드 전환 전에 현재 상태 저장
-    const currentBookmarksState = showBookmarks;
-    
-    // 안전한 상태 전환을 위해 모든 상태 초기화
-    setShowBookmarks(false);
-    
-    // 약간의 지연 후 상태 복원 및 전환
-    setTimeout(() => {
-      // 이전 상태의 반대로 북마크 모드 설정
-      setShowBookmarks(!currentBookmarksState);
-      
-      if (!currentBookmarksState) {
-        // 북마크 모드로 전환
-        setSelectedCategory('all');
-        setSelectedTag(null);
-        refreshBookmarks();
-      }
-    }, 50);
-  }, [showBookmarks, refreshBookmarks, clearSelection]);
+  // 북마크 기능은 이제 완전히 분리된 모드로 작동하므로
+  // 북마크 모드는 initialShowBookmarks로만 제어됨
+  // 토글 기능은 더 이상 사용하지 않음
 
   // 컴포넌트 마운트/언마운트 시 Selection API 관리
   useEffect(() => {
@@ -393,6 +384,8 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   const filteredPosts = useMemo(() => {
     // 검색어 필터링
     let result = posts;
+    
+    // 검색어 필터링
     if (searchTerm.trim() !== '') {
       result = result.filter(post => 
         post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -401,57 +394,62 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       );
     }
     
+    // 디버깅용 로그 (개발 중 확인용)
+    if (showBookmarks) {
+      console.log('북마크 모드 - 표시 게시물:', result.length);
+      console.log('선택된 카테고리:', selectedCategory);
+      console.log('선택된 태그:', selectedTag);
+    }
+    
     return result;
-  }, [posts, searchTerm]);
+  }, [posts, searchTerm, showBookmarks, selectedCategory, selectedTag]);
 
   // 게시물 선택 처리
   const handleSelectPost = useCallback((post: UIPost) => {
     setSelectedPost(post);
   }, []);
 
-  // 북마크 모드에서 카테고리 선택 처리
+  // 카테고리 선택 처리 - 북마크 모드에서도 유지되도록 수정
   const handleSelectCategory = useCallback((categoryId: string) => {
     // 선택 초기화
     clearSelection();
     
-    // 현재 상태 저장
-    const wasInBookmarkMode = showBookmarks;
-    
-    // 모든 상태 초기화
-    if (wasInBookmarkMode) {
-      setShowBookmarks(false);
-    }
-    
-    // 약간의 지연 후 새 상태 설정
+    // 현재 북마크 모드 유지하면서 카테고리 변경
     setTimeout(() => {
       setSelectedCategory(categoryId);
       setSelectedTag(null); // 태그 선택 초기화
       
+      // 북마크 모드일 때 북마크 데이터 새로고침
+      if (showBookmarks) {
+        refreshBookmarks();
+      }
+      
       // 카테고리 변경 시 선택된 게시물 초기화 처리는 useEffect에서 자동으로 처리됨
-    }, 50);
-  }, [showBookmarks, clearSelection]);
+    }, 20);
+  }, [showBookmarks, clearSelection, refreshBookmarks]);
 
-  // 북마크 모드에서 태그 선택 처리
+  // 태그 선택 처리 - 북마크 모드에서도 유지되도록 수정
   const handleSelectTag = useCallback((tag: string | null) => {
     // 선택 초기화
     clearSelection();
     
-    // 현재 상태 저장
-    const wasInBookmarkMode = showBookmarks;
-    
-    // 모든 상태 초기화
-    if (wasInBookmarkMode) {
-      setShowBookmarks(false);
-    }
-    
-    // 약간의 지연 후 새 상태 설정
+    // 북마크 모드 유지하면서 태그 변경
     setTimeout(() => {
       setSelectedTag(tag); // 태그 선택 또는 해제
-      setSelectedCategory('all'); // 카테고리 초기화
+      
+      // 태그만 필터링할 때는 전체 카테고리로 설정
+      if (tag) {
+        setSelectedCategory('all');
+      }
+      
+      // 북마크 모드일 때 북마크 데이터 새로고침
+      if (showBookmarks) {
+        refreshBookmarks();
+      }
       
       // 태그 변경 시 선택된 게시물 초기화 처리는 useEffect에서 자동으로 처리됨
-    }, 50);
-  }, [showBookmarks, clearSelection]);
+    }, 20);
+  }, [showBookmarks, clearSelection, refreshBookmarks]);
 
   const handleOpenNewPost = useCallback(() => {
     setPostToEdit(null);
@@ -579,14 +577,39 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     }
   }, [postToEdit, user, refreshPostData, showToast]);
   
-  // 검색 필터링 처리
+  // 북마크된 게시물에서 사용된 카테고리 추출
+  const bookmarkedCategories = useMemo(() => {
+    if (!showBookmarks) return categoriesData;
+    
+    // 북마크된 게시물에서 사용된 카테고리 ID 추출
+    const categoryIds = new Set<string>();
+    bookmarkedPosts.forEach(post => {
+      if (post.category) {
+        categoryIds.add(post.category);
+      }
+    });
+    
+    // '전체' 카테고리는 항상 포함
+    const filteredCategories = [
+      categoriesData[0], // '모든 게시물' 카테고리
+      ...categoriesData.slice(1).filter(category => categoryIds.has(category.id))
+    ];
+    
+    return filteredCategories;
+  }, [showBookmarks, bookmarkedPosts, categoriesData]);
+
+  // 검색 필터링 처리 - 북마크 모드에서는 북마크된 게시물의 태그만 표시
   const allTags = useMemo(() => {
     const tagsSet = new Set<string>();
-    posts.forEach(post => {
+    
+    // 북마크 모드일 때는 북마크된 게시물의 태그만 사용
+    const sourceList = showBookmarks ? bookmarkedPosts : posts;
+    
+    sourceList.forEach(post => {
       post.tags?.forEach(tag => tagsSet.add(tag));
     });
     return Array.from(tagsSet).sort();
-  }, [posts]);
+  }, [posts, showBookmarks, bookmarkedPosts]);
 
   useEffect(() => {
     const isPostSelected = selectedPost !== null;
@@ -665,14 +688,16 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       >
         <TrafficLights onClose={onClose} onMinimize={handleMinimize} onMaximize={handleToggleMaximize} />
         <div className="flex-grow text-center">
-           <h1 className="font-semibold text-slate-700 select-none">{showBookmarks ? "북마크" : "게시판"}</h1>
+           <h1 className="font-semibold text-slate-700 select-none">
+              {showBookmarks ? "북마크" : "게시판"}
+           </h1>
         </div>
         <div className="w-16"></div>
       </header>
       <WindowMenuBar menus={menus} />
       <main className="flex flex-grow overflow-hidden" style={{ height: 'calc(100% - 56px - 32px)'}}>
-        <Sidebar
-          categories={categories}
+                  <Sidebar
+          categories={showBookmarks ? bookmarkedCategories : categories}
           selectedCategory={selectedCategory}
           onSelectCategory={handleSelectCategory}
           onNewPost={handleOpenNewPost}
@@ -680,8 +705,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
           selectedTag={selectedTag}
           onSelectTag={handleSelectTag}
           showBookmarks={showBookmarks}
-          onToggleBookmarks={handleToggleBookmarks}
-        />
+          />
         
         {loading ? (
           <div className="flex-grow flex items-center justify-center">
