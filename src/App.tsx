@@ -3,20 +3,77 @@
  * 전체 앱의 레이아웃과 라우팅을 관리합니다.
  */
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Desktop from '../components/Desktop';
 import LoginScreen from '../components/LoginScreen';
 import { useAuth } from './hooks/useAuth';
+import { useAdminAuth } from './hooks/useAdminAuth';
+import AdminLayout from './components/admin/AdminLayout';
 import './index.css';
 
 // 로그아웃 상태를 저장하기 위한 로컬 스토리지 키
 const LOGOUT_FLAG_KEY = 'mac_board_force_logout';
 
 /**
+ * 어드민 대시보드 페이지 컴포넌트
+ * 실제 구현은 별도 파일로 분리할 예정입니다.
+ */
+const AdminDashboard: React.FC = () => (
+  <AdminLayout title="대시보드">
+    <h2 className="text-xl font-semibold mb-4">관리자 대시보드</h2>
+    <p>관리자 대시보드 내용이 여기에 표시됩니다.</p>
+  </AdminLayout>
+);
+
+/**
+ * 어드민 게시물 관리 페이지 컴포넌트
+ * 실제 구현은 별도 파일로 분리할 예정입니다.
+ */
+const AdminPosts: React.FC = () => (
+  <AdminLayout title="게시물 관리">
+    <h2 className="text-xl font-semibold mb-4">게시물 관리</h2>
+    <p>게시물 관리 내용이 여기에 표시됩니다.</p>
+  </AdminLayout>
+);
+
+/**
+ * 어드민 카테고리 관리 페이지 컴포넌트
+ * 실제 구현은 별도 파일로 분리할 예정입니다.
+ */
+const AdminCategories: React.FC = () => (
+  <AdminLayout title="카테고리 관리">
+    <h2 className="text-xl font-semibold mb-4">카테고리 관리</h2>
+    <p>카테고리 관리 내용이 여기에 표시됩니다.</p>
+  </AdminLayout>
+);
+
+/**
+ * 어드민 태그 관리 페이지 컴포넌트
+ * 실제 구현은 별도 파일로 분리할 예정입니다.
+ */
+const AdminTags: React.FC = () => (
+  <AdminLayout title="태그 관리">
+    <h2 className="text-xl font-semibold mb-4">태그 관리</h2>
+    <p>태그 관리 내용이 여기에 표시됩니다.</p>
+  </AdminLayout>
+);
+
+/**
+ * 어드민 데이터 백업/복원 페이지 컴포넌트
+ * 실제 구현은 별도 파일로 분리할 예정입니다.
+ */
+const AdminBackup: React.FC = () => (
+  <AdminLayout title="데이터 백업/복원">
+    <h2 className="text-xl font-semibold mb-4">데이터 백업/복원</h2>
+    <p>데이터 백업/복원 내용이 여기에 표시됩니다.</p>
+  </AdminLayout>
+);
+
+/**
  * 애플리케이션 루트 컴포넌트
  */
 const App: React.FC = () => {
-  // 인증 상태 관리
+  // 일반 사용자 인증 상태 관리
   const { user, isLoading, error, isAuthenticated, signOut } = useAuth();
   const [manualLoginUser, setManualLoginUser] = useState<any>(null);
   const [forceLogout, setForceLogout] = useState<boolean>(() => {
@@ -117,19 +174,32 @@ const App: React.FC = () => {
   });
 
   return (
-    <Router>
-      {isUserLoggedIn && effectiveUser ? (
-        // 로그인 상태 - 데스크톱 환경 표시
-        <Desktop 
-          user={effectiveUser} 
-          onOpenBoard={handleOpenBoard} 
-          onLogout={handleLogout} 
-        />
-      ) : (
-        // 로그아웃 상태 - 로그인 화면 표시
-        <LoginScreen onLogin={handleLogin} />
-      )}
-    </Router>
+    <Routes>
+      {/* 어드민 라우트 */}
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/posts" element={<AdminPosts />} />
+      <Route path="/admin/categories" element={<AdminCategories />} />
+      <Route path="/admin/tags" element={<AdminTags />} />
+      <Route path="/admin/backup" element={<AdminBackup />} />
+      
+      {/* 메인 앱 라우트 */}
+      <Route path="/" element={
+        isUserLoggedIn && effectiveUser ? (
+          // 로그인 상태 - 데스크톱 환경 표시
+          <Desktop 
+            user={effectiveUser} 
+            onOpenBoard={handleOpenBoard} 
+            onLogout={handleLogout} 
+          />
+        ) : (
+          // 로그아웃 상태 - 로그인 화면 표시
+          <LoginScreen onLogin={handleLogin} />
+        )
+      } />
+      
+      {/* 기타 경로는 메인으로 리다이렉트 */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
 

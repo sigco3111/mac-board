@@ -94,3 +94,14 @@ export interface User {
   photoURL?: string;
   isAnonymous?: boolean;
 } 
+
+/**
+ * 관리자 정보 인터페이스
+ * 관리자 인증 시스템에서 사용됩니다.
+ */
+export interface Admin {
+  id: string;             // 관리자 ID
+  isAdmin: boolean;       // 관리자 권한 여부
+  loggedInAt: Date;       // 로그인 시간
+  expiresAt: Date;        // 세션 만료 시간
+} 

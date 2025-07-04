@@ -2,10 +2,11 @@
  * 애플리케이션 렌더링 진입점
  * React 앱을 DOM에 마운트합니다.
  */
-import React, { useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import App from './App';
 import { initFirestore } from './services/firebase/initFirestore';
 
 // URL 파라미터에서 'init=firestore'가 있는지 확인하여 Firestore 초기화
@@ -31,9 +32,39 @@ const checkAndInitFirestore = async () => {
 // 앱 초기화 시 Firestore 초기화 체크
 checkAndInitFirestore();
 
+// IndexSizeError 에러를 전역적으로 처리하는 핸들러 추가
+window.addEventListener('error', (event) => {
+  // Selection 관련 에러 감지
+  if (
+    event.error && 
+    event.error.name === 'IndexSizeError' && 
+    event.error.message && 
+    event.error.message.includes('getRange')
+  ) {
+    console.log('Selection 에러 감지, 현재 선택 초기화');
+    
+    // 현재 선택 초기화 시도
+    try {
+      if (window.getSelection) {
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+        }
+      }
+    } catch (e) {
+      console.error('선택 초기화 중 오류:', e);
+    }
+    
+    // 에러 처리 완료 표시
+    event.preventDefault();
+  }
+});
+
 // React 앱을 DOM에 마운트
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </React.StrictMode>
 ); 
