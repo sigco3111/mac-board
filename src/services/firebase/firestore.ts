@@ -923,21 +923,21 @@ export const fetchCategoriesFromFirestore = async (): Promise<{ id: string; name
         // 초기 설정 문서 생성 시도
         try {
           console.log('설정 문서 생성 시도...');
+          
+          // 기본 카테고리 설정
+          const defaultCategories = [
+            { id: 'general', name: '자유게시판', icon: '📝' }
+          ];
+          
           await setDoc(settingsRef, {
-            categories: [
-              { id: 'general', name: '자유게시판', icon: '📝' },
-              { id: 'tech', name: '기술', icon: '💻' }
-            ],
+            categories: defaultCategories,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now()
           });
           console.log('설정 문서가 생성되었습니다.');
           
           // 새로 생성된 카테고리 반환
-          return [
-            { id: 'general', name: '자유게시판', icon: '📝' },
-            { id: 'tech', name: '기술', icon: '💻' }
-          ];
+          return defaultCategories;
         } catch (initError) {
           console.error('설정 문서 초기화 실패:', initError);
           throw new Error(`설정 초기화에 실패했습니다: ${initError instanceof Error ? initError.message : '알 수 없는 오류'}`);

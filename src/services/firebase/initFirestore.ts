@@ -72,9 +72,7 @@ const samplePosts = [
 const defaultSettings = {
   id: 'global-settings',
   categories: [
-    { id: 'general', name: '자유게시판' },
-    { id: 'tech', name: '기술' },
-    { id: 'questions', name: '질문' }
+    { id: 'general', name: '자유게시판' }
   ],
   allowAnonymousPosting: true,
   allowComments: true,

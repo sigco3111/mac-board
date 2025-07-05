@@ -226,16 +226,6 @@ const CategoryManagement: React.FC = () => {
     const sourceIndex = result.source.index;
     const destIndex = result.destination.index;
 
-    // 시스템 카테고리는 순서 변경 제한 (일단 화면에서만 제한)
-    const systemCategories = ['general', 'tech', 'questions'];
-    if (
-      systemCategories.includes(categories[sourceIndex].id) || 
-      systemCategories.includes(categories[destIndex].id)
-    ) {
-      setError('기본 시스템 카테고리의 위치는 변경할 수 없습니다.');
-      return;
-    }
-    
     // 위치가 변경되지 않은 경우
     if (destIndex === sourceIndex) {
       return;
@@ -296,27 +286,19 @@ const CategoryManagement: React.FC = () => {
               key={category.id} 
               draggableId={category.id} 
               index={index}
-              isDragDisabled={['general', 'tech', 'questions'].includes(category.id)}
+              isDragDisabled={false}
             >
               {(provided) => (
                 <tr
                   ref={provided.innerRef}
                   {...provided.draggableProps}
                   {...provided.dragHandleProps}
-                  className={`
-                    ${['general', 'tech', 'questions'].includes(category.id) ? 'bg-gray-50' : ''}
-                    hover:bg-gray-50
-                  `}
+                  className="hover:bg-gray-50"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {category.id}
                     </div>
-                    {['general', 'tech', 'questions'].includes(category.id) && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        시스템
-                      </span>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingId === category.id ? (
@@ -365,29 +347,20 @@ const CategoryManagement: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        {!['general', 'tech', 'questions'].includes(category.id) && (
-                          <>
-                            <button
-                              onClick={() => startEditing(category)}
-                              className="text-indigo-600 hover:text-indigo-900 mr-2 disabled:opacity-50"
-                              disabled={isLoading}
-                            >
-                              수정
-                            </button>
-                            <button
-                              onClick={() => confirmDelete(category.id)}
-                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                              disabled={isLoading}
-                            >
-                              삭제
-                            </button>
-                          </>
-                        )}
-                        {['general', 'tech', 'questions'].includes(category.id) && (
-                          <span className="text-gray-400">
-                            시스템 카테고리
-                          </span>
-                        )}
+                        <button
+                          onClick={() => startEditing(category)}
+                          className="text-indigo-600 hover:text-indigo-900 mr-2 disabled:opacity-50"
+                          disabled={isLoading}
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => confirmDelete(category.id)}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                          disabled={isLoading}
+                        >
+                          삭제
+                        </button>
                       </>
                     )}
                   </td>

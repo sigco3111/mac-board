@@ -117,29 +117,9 @@ const PostList: React.FC<PostListProps> = ({ onViewDetail }) => {
 
   // 카테고리 배지 렌더링 함수
   const renderCategoryBadge = useCallback((category: string) => {
-    let bgColor = 'bg-gray-100';
-    let textColor = 'text-gray-800';
-    
-    switch (category) {
-      case 'general':
-        bgColor = 'bg-blue-100';
-        textColor = 'text-blue-800';
-        break;
-      case 'tech':
-        bgColor = 'bg-green-100';
-        textColor = 'text-green-800';
-        break;
-      case 'news':
-        bgColor = 'bg-purple-100';
-        textColor = 'text-purple-800';
-        break;
-      case 'question':
-        bgColor = 'bg-yellow-100';
-        textColor = 'text-yellow-800';
-        break;
-      default:
-        break;
-    }
+    // 모든 카테고리를 동일하게 처리
+    const bgColor = 'bg-blue-100';
+    const textColor = 'text-blue-800';
     
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${bgColor} ${textColor}`}>

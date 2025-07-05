@@ -281,11 +281,6 @@ export const updateCategory = async (
   // 관리자 권한 검증
   verifyAdminAuth();
   
-  // 시스템 카테고리 수정 제한
-  if (categoryId === 'general' || categoryId === 'tech' || categoryId === 'questions') {
-    throw new Error('기본 시스템 카테고리는 수정할 수 없습니다.');
-  }
-  
   let attempts = 0;
   
   while (attempts < MAX_RETRY_COUNT) {
@@ -379,11 +374,6 @@ export const deleteCategory = async (categoryId: string): Promise<boolean> => {
   // 관리자 권한 검증
   verifyAdminAuth();
   
-  // 시스템 카테고리 삭제 제한
-  if (categoryId === 'general' || categoryId === 'tech' || categoryId === 'questions') {
-    throw new Error('기본 시스템 카테고리는 삭제할 수 없습니다.');
-  }
-  
   let attempts = 0;
   
   while (attempts < MAX_RETRY_COUNT) {
@@ -417,14 +407,24 @@ export const deleteCategory = async (categoryId: string): Promise<boolean> => {
         );
         const postsSnapshot = await getDocs(postsQuery);
         
-        // 2. 모든 게시물의 카테고리를 'general'로 변경
-        postsSnapshot.docs.forEach(postDoc => {
-          const postRef = doc(db, POSTS_COLLECTION, postDoc.id);
-          transaction.update(postRef, { 
-            category: 'general',
-            updatedAt: Timestamp.now()
+        // 2. 남아있는 카테고리 중 첫 번째 카테고리를 찾아서 사용
+        const remainingCategories = categories.filter((cat: CategoryItem) => cat.id !== categoryId);
+        const targetCategoryId = remainingCategories.length > 0 ? remainingCategories[0].id : '';
+        
+        if (postsSnapshot.size > 0) {
+          if (!targetCategoryId) {
+            throw new Error('게시물을 이동할 카테고리가 없습니다. 최소한 하나의 카테고리가 필요합니다.');
+          }
+          
+          // 모든 게시물의 카테고리를 첫 번째 카테고리로 변경
+          postsSnapshot.docs.forEach(postDoc => {
+            const postRef = doc(db, POSTS_COLLECTION, postDoc.id);
+            transaction.update(postRef, { 
+              category: targetCategoryId,
+              updatedAt: Timestamp.now()
+            });
           });
-        });
+        }
         
         // 3. 카테고리 삭제
         transaction.update(settingsRef, {
@@ -432,7 +432,7 @@ export const deleteCategory = async (categoryId: string): Promise<boolean> => {
           updatedAt: Timestamp.now()
         });
         
-        console.log(`카테고리 '${categoryId}' 삭제 완료, ${postsSnapshot.size}개의 게시물을 'general' 카테고리로 이동했습니다.`);
+        console.log(`카테고리 '${categoryId}' 삭제 완료, ${postsSnapshot.size}개의 게시물을 '${targetCategoryId}' 카테고리로 이동했습니다.`);
         return true;
       });
     } catch (error) {
@@ -484,7 +484,7 @@ export const reorderCategories = async (sortedCategories: CategoryItem[]): Promi
       // 카테고리 유효성 검사 (모든 기존 카테고리가 포함되어 있는지)
       const existingCategories = settingsSnap.data().categories || [];
       const existingIds = new Set(existingCategories.map((cat: CategoryItem) => cat.id));
-      const newIds = new Set(sortedCategories.map(cat => cat.id));
+      const newIds = new Set(sortedCategories.map((cat: CategoryItem) => cat.id));
       
       // 삭제된 ID 확인
       for (const id of existingIds) {
