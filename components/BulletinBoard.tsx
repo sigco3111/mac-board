@@ -29,7 +29,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [showBookmarks, setShowBookmarks] = useState<boolean>(initialShowBookmarks);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState<UIPost | null>(null);
@@ -171,6 +171,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   // 로딩 및 에러 상태 통합
   const loading = showBookmarks ? bookmarkLoading : postsLoading;
   const error = showBookmarks ? bookmarkError : postsError;
+  
+  // 에러 메시지 상태 추가
+  const errorMessage = useMemo(() => {
+    if (!error) return null;
+    return typeof error.message === 'string' ? error.message : '오류가 발생했습니다';
+  }, [error]);
 
   // 표시할 게시물 결정
   const posts = useMemo(() => {
@@ -831,7 +837,9 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
               selectedPost={selectedPost} 
               onSelectPost={handleSelectPost} 
               loading={loading}
-              error={error?.message}
+              error={errorMessage}
+              searchTerm={searchTerm}
+              onSearch={(term) => setSearchTerm(term)}
             />
           </div>
           <div className="flex-1 overflow-auto bg-slate-50">
