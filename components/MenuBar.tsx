@@ -77,7 +77,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
       <div className="flex items-center space-x-4">
         <div className="relative">
           <button onClick={() => handleMenuToggle('apple')} className="transition-opacity hover:opacity-80">
-            <AppleIcon className="w-5 h-5" />
+            <AppleIcon className="w-5 h-5 text-white fill-current" />
           </button>
           {activeMenu === 'apple' && (
             <div className="absolute left-0 mt-1.5 w-56 bg-white/80 backdrop-blur-xl rounded-md shadow-2xl ring-1 ring-black/5 py-1">

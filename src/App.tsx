@@ -4,6 +4,8 @@
  */
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Desktop from '../components/Desktop';
 import LoginScreen from '../components/LoginScreen';
 import { useAuth } from './hooks/useAuth';
@@ -138,32 +140,38 @@ const App: React.FC = () => {
   });
 
   return (
-    <Routes>
-      {/* 어드민 라우트 */}
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/admin/posts/*" element={<AdminLayout title="게시물 관리"><AdminPosts /></AdminLayout>} />
-      <Route path="/admin/categories" element={<AdminLayout title="카테고리 관리"><CategoryManagement /></AdminLayout>} />
-      {/* 백업/복원 페이지 라우트 */}
-      <Route path="/admin/backup" element={<BackupRestorePage />} />
+    <>
+      <Routes>
+        {/* 어드민 라우트 */}
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/posts/*" element={<AdminLayout title="게시물 관리"><AdminPosts /></AdminLayout>} />
+        <Route path="/admin/categories" element={<AdminLayout title="카테고리 관리"><CategoryManagement /></AdminLayout>} />
+        {/* 백업/복원 페이지 라우트 */}
+        <Route path="/admin/backup" element={<BackupRestorePage />} />
+        
+        {/* 메인 앱 라우트 */}
+        <Route path="/" element={
+          isUserLoggedIn && effectiveUser ? (
+            // 로그인 상태 - 데스크톱 환경 표시
+            <Desktop 
+              user={effectiveUser} 
+              onOpenBoard={handleOpenBoard} 
+              onLogout={handleLogout} 
+            />
+          ) : (
+            // 로그아웃 상태 - 로그인 화면 표시
+            <LoginScreen onLogin={handleLogin} />
+          )
+        } />
+        
+        {/* 기타 경로는 메인으로 리다이렉트 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       
-      {/* 메인 앱 라우트 */}
-      <Route path="/" element={
-        isUserLoggedIn && effectiveUser ? (
-          // 로그인 상태 - 데스크톱 환경 표시
-          <Desktop 
-            user={effectiveUser} 
-            onOpenBoard={handleOpenBoard} 
-            onLogout={handleLogout} 
-          />
-        ) : (
-          // 로그아웃 상태 - 로그인 화면 표시
-          <LoginScreen onLogin={handleLogin} />
-        )
-      } />
-      
-      {/* 기타 경로는 메인으로 리다이렉트 */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      {/* Vercel Analytics 및 Speed Insights 추가 */}
+      <Analytics debug={process.env.NODE_ENV === 'development'} />
+      <SpeedInsights debug={process.env.NODE_ENV === 'development'} />
+    </>
   );
 };
 

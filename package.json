@@ -11,6 +11,8 @@
   "dependencies": {
     "@uiw/react-markdown-preview": "^5.1.4",
     "@uiw/react-md-editor": "^4.0.7",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "chart.js": "^4.5.0",
     "firebase": "^10.7.2",
     "github-markdown-css": "^5.8.1",
