@@ -59,8 +59,11 @@ export const usePosts = (options?: { category?: string; tag?: string }) => {
         const allPostsForTags = await fetchPosts();
         const tags = allPostsForTags.flatMap(post => post.tags || []);
         const uniqueTags = [...new Set(tags)];
-        setAllTags(uniqueTags);
-        console.log("전체 태그 로드 완료:", uniqueTags);
+        
+        // 한글 로케일 기준으로 가나다순 정렬
+        const sortedTags = uniqueTags.sort((a, b) => a.localeCompare(b, 'ko'));
+        setAllTags(sortedTags);
+        console.log("전체 태그 로드 완료:", sortedTags);
 
       } catch (err) {
         console.error('초기 데이터 로드 오류:', err);

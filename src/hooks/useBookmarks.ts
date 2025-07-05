@@ -84,11 +84,20 @@ export const useBookmarks = (userId?: string) => {
    * 북마크 추가 함수
    * @param postId 게시물 ID
    */
-  const toggleBookmark = useCallback(async (postId: string) => {
+  const toggleBookmark = useCallback(async (postId: string, isAnonymous?: boolean) => {
     if (!userId || !postId) {
       setState(prev => ({
         ...prev,
         error: new Error('로그인이 필요합니다.')
+      }));
+      return false;
+    }
+
+    // 게스트 사용자(익명 사용자) 북마크 제한
+    if (isAnonymous) {
+      setState(prev => ({
+        ...prev,
+        error: new Error('게스트는 북마크 기능을 사용할 수 없습니다. 로그인 후 이용해주세요.')
       }));
       return false;
     }

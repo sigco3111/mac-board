@@ -8,7 +8,7 @@ import NewPostModal from './NewPostModal';
 import WindowMenuBar from './WindowMenuBar';
 import ConfirmationModal from './ConfirmationModal';
 import Toast from './Toast';
-import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
+import { FolderIcon, MessagesSquareIcon, TagIcon, BookmarkIcon } from './icons';
 import { usePosts } from '../src/hooks/usePosts.tsx';
 import { useBookmarks } from '../src/hooks/useBookmarks';
 import { deletePost, updatePost, createPost, movePost } from '../src/services/firebase/firestore';
@@ -338,7 +338,8 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       }
     });
     
-    return Array.from(tagsInCategory).sort();
+    // 한글 로케일 기준으로 가나다순 정렬
+    return Array.from(tagsInCategory).sort((a, b) => a.localeCompare(b, 'ko'));
   }, [posts, selectedCategory, allTags]);
   
   // 사이드바에 표시할 카테고리 (북마크 모드에 따라 다름)
@@ -501,11 +502,23 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
 
   // 게시물 작성 및 수정 관련 함수
   const handleOpenNewPost = useCallback(() => {
+    // 게스트 사용자 확인 및 접근 제한
+    if (user?.isAnonymous) {
+      showToast('게스트는 게시물을 작성할 수 없습니다. 로그인 후 이용해주세요.', 'error');
+      return;
+    }
+    
     setPostToEdit(null);
     setIsModalOpen(true);
-  }, []);
+  }, [user?.isAnonymous, showToast]);
 
   const handleOpenEditModal = useCallback((postParam?: UIPost) => {
+    // 게스트 사용자 확인 및 접근 제한
+    if (user?.isAnonymous) {
+      showToast('게스트는 게시물을 수정할 수 없습니다. 로그인 후 이용해주세요.', 'error');
+      return;
+    }
+    
     // 파라미터로 전달된 게시물이 있으면 그것을 사용하고,
     // 없으면 현재 선택된 게시물(selectedPost)을 사용함
     const post = postParam || selectedPost;
@@ -542,7 +555,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       console.error("게시물 수정 준비 중 오류:", error);
       showToast('게시물 수정을 위한 데이터 준비 중 오류가 발생했습니다.', 'error');
     }
-  }, [selectedPost, showToast]);
+  }, [selectedPost, showToast, user?.isAnonymous]);
 
   const handleSavePost = useCallback(async (postData: { title: string; category: string; content: string; tags: string[] }) => {
     try {
@@ -550,6 +563,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
         // postToEdit이 유효한지 확인
         if (!postToEdit.id) {
           throw new Error("유효하지 않은 게시물 ID입니다.");
+        }
+        
+        // 게스트 사용자가 게시물을 수정하려는 경우 차단
+        if (user?.isAnonymous) {
+          showToast('게스트는 게시물을 수정할 수 없습니다. 로그인 후 이용해주세요.', 'error');
+          return;
         }
         
         // 디버그 로그 추가
@@ -574,6 +593,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
         // 새 게시물 작성
         if (!user) {
           showToast('로그인이 필요합니다.', 'error');
+          return;
+        }
+        
+        // 게스트 사용자가 새 게시물을 작성하려는 경우 차단
+        if (user.isAnonymous) {
+          showToast('게스트는 게시물을 작성할 수 없습니다. 로그인 후 이용해주세요.', 'error');
           return;
         }
         
@@ -606,8 +631,14 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
 
   // 게시물 삭제 관련 함수
   const requestDeletePost = useCallback(() => {
+    // 게스트 사용자 확인 및 접근 제한
+    if (user?.isAnonymous) {
+      showToast('게스트는 게시물을 삭제할 수 없습니다. 로그인 후 이용해주세요.', 'error');
+      return;
+    }
+    
     setIsDeleteModalOpen(true);
-  }, []);
+  }, [user?.isAnonymous, showToast]);
 
   const confirmDeletePost = useCallback(async () => {
     if (!selectedPost) return;
@@ -649,6 +680,34 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     return post?.authorId === user?.uid;
   }, [user?.uid]);
 
+  // 북마크 모드 전환 함수
+  const handleToggleBookmarks = useCallback(() => {
+    // 게스트 사용자 확인 및 접근 제한
+    if (user?.isAnonymous) {
+      showToast('게스트는 북마크 기능을 사용할 수 없습니다. 로그인 후 이용해주세요.', 'error');
+      return;
+    }
+
+    // 선택 초기화
+    clearSelection();
+    
+    setTimeout(() => {
+      // 카테고리와 태그 초기화
+      setSelectedCategory('all');
+      setSelectedTag(null);
+      
+      // 북마크 모드 전환
+      setShowBookmarks(prev => !prev);
+      
+      // 북마크 데이터 새로고침
+      if (!showBookmarks) {
+        refreshBookmarks();
+      } else {
+        refreshPosts();
+      }
+    }, 10);
+  }, [user?.isAnonymous, showBookmarks, clearSelection, refreshBookmarks, refreshPosts, showToast]);
+  
   // 메뉴 생성 및 업데이트
   useEffect(() => {
     const isPostSelected = selectedPost !== null;
@@ -701,9 +760,19 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
             items: moveSubMenu 
           },
         ]
+      },
+      {
+        name: '보기',
+        items: [
+          { 
+            label: showBookmarks ? '모든 게시물 보기' : '북마크만 보기', 
+            action: handleToggleBookmarks,
+            disabled: user?.isAnonymous // 게스트 사용자는 북마크 기능 비활성화
+          },
+        ]
       }
     ]);
-  }, [selectedPost, categories, onClose, handleOpenEditModal, requestDeletePost, handleMovePost, handleOpenNewPost, isPostOwner]);
+  }, [selectedPost, categories, onClose, handleOpenEditModal, requestDeletePost, handleMovePost, handleOpenNewPost, isPostOwner, showBookmarks, handleToggleBookmarks, user?.isAnonymous]);
   
   return (
     <div
@@ -731,7 +800,17 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
               {showBookmarks ? "북마크" : "게시판"}
            </h1>
         </div>
-        <div className="w-16"></div>
+        <div className="w-16 flex justify-end">
+          {!user?.isAnonymous && (
+            <button 
+              onClick={handleToggleBookmarks}
+              className={`p-2 rounded-full transition-colors ${showBookmarks ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}
+              title={showBookmarks ? "모든 게시물 보기" : "북마크만 보기"}
+            >
+              <BookmarkIcon className="w-5 h-5" fill={showBookmarks ? "currentColor" : "none"} />
+            </button>
+          )}
+        </div>
       </header>
       <WindowMenuBar menus={menus} />
       <main className="flex flex-grow overflow-hidden" style={{ height: 'calc(100% - 56px - 32px)'}}>

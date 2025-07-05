@@ -35,7 +35,12 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
   const handleBookmarkToggle = (e: React.MouseEvent) => {
     e.stopPropagation(); // 부모 onClick 이벤트 전파 방지
     if (user) {
-      toggleBookmark(post.id);
+      // 게스트 사용자 북마크 제한
+      if (user.isAnonymous) {
+        alert('게스트는 북마크 기능을 사용할 수 없습니다. 로그인 후 이용해주세요.');
+        return;
+      }
+      toggleBookmark(post.id, user.isAnonymous);
     }
   };
 
@@ -89,7 +94,7 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
             <span className="whitespace-nowrap text-blue-600 font-medium">{formatDate(post.date)}</span>
           </div>
           <div className="flex items-center mt-1 justify-end">
-            {user && (
+            {user && !user.isAnonymous && (
               <button 
                 onClick={handleBookmarkToggle}
                 className={`transition-colors ${isBookmarked(post.id) ? 'text-blue-500' : 'text-slate-400 hover:text-blue-500'}`}

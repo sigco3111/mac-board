@@ -28,6 +28,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     
     if (!newComment.trim() || !user) return;
     
+    // 게스트 사용자 확인 및 접근 제한
+    if (user.isAnonymous) {
+      alert('게스트는 댓글을 작성할 수 없습니다. 로그인 후 이용해주세요.');
+      return;
+    }
+    
     try {
       setSubmitting(true);
       await addComment(newComment);
@@ -46,6 +52,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     
     if (!editingComment || !editingComment.content.trim() || !user) return;
     
+    // 게스트 사용자 확인 및 접근 제한
+    if (user.isAnonymous) {
+      alert('게스트는 댓글을 수정할 수 없습니다. 로그인 후 이용해주세요.');
+      return;
+    }
+    
     try {
       setSubmitting(true);
       await editComment(editingComment.id, editingComment.content);
@@ -60,6 +72,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
   
   // 댓글 삭제 처리
   const handleDeleteComment = async (commentId: string) => {
+    // 게스트 사용자 확인 및 접근 제한
+    if (user?.isAnonymous) {
+      alert('게스트는 댓글을 삭제할 수 없습니다. 로그인 후 이용해주세요.');
+      return;
+    }
+    
     if (!window.confirm('정말 이 댓글을 삭제하시겠습니까?')) return;
     
     try {
@@ -72,6 +90,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
   
   // 댓글 수정 모드 시작
   const startEditing = (comment: UIComment) => {
+    if (user?.isAnonymous) {
+      alert('게스트는 댓글을 수정할 수 없습니다. 로그인 후 이용해주세요.');
+      return;
+    }
+    
     setEditingComment({
       id: comment.id,
       content: comment.content
@@ -203,8 +226,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
         )}
       </div>
       
-      {/* 댓글 작성 폼 */}
-      {user ? (
+      {/* 댓글 작성 폼 - 게스트는 댓글 작성 폼 대신 안내 메시지 표시 */}
+      {user && !user.isAnonymous ? (
         <form onSubmit={handleSubmitComment} className="p-4 bg-slate-50">
           <div className="flex items-start space-x-3">
             <img 
@@ -237,6 +260,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
             </div>
           </div>
         </form>
+      ) : user && user.isAnonymous ? (
+        <div className="p-4 bg-slate-50 text-center text-slate-600">
+          게스트는 댓글을 작성할 수 없습니다. <a href="#" className="text-blue-600 hover:underline">로그인</a> 후 이용해주세요.
+        </div>
       ) : (
         <div className="p-4 bg-slate-50 text-center text-slate-600">
           댓글을 작성하려면 <a href="#" className="text-blue-600 hover:underline">로그인</a>이 필요합니다.
