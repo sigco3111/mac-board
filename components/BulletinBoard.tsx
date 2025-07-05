@@ -595,6 +595,39 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
         }, user?.uid);
         
         showToast('게시물이 수정되었습니다.', 'success');
+        
+        // 모달 닫기
+        setIsModalOpen(false);
+        setPostToEdit(null); // 수정 데이터 초기화
+        
+        // 데이터 새로고침 및 상태 업데이트 순서 조정
+        try {
+          console.log("게시물 수정 후 데이터 새로고침 시작");
+          // 먼저 게시물 목록 새로고침
+          const refreshedPosts = await refreshPosts();
+          // 북마크 목록도 새로고침
+          await refreshBookmarks();
+          
+          // 새로 고침된 posts에서 현재 선택된 게시물 찾기
+          if (refreshedPosts) {
+            const updatedSelectedPost = refreshedPosts.find(post => post.id === postToEdit.id);
+            if (updatedSelectedPost) {
+              console.log("수정된 게시물을 찾아 상세 화면 업데이트:", updatedSelectedPost.title);
+              setSelectedPost(updatedSelectedPost);
+            } else {
+              // 게시물을 직접 조회하여 최신 데이터 가져오기
+              const { fetchPostById } = await import('../src/services/firebase/firestore');
+              const updatedPost = await fetchPostById(postToEdit.id.toString());
+              
+              if (updatedPost) {
+                console.log("직접 조회로 게시물 정보 갱신:", updatedPost.title);
+                setSelectedPost(updatedPost);
+              }
+            }
+          }
+        } catch (refreshError) {
+          console.error("데이터 새로고침 및 게시물 정보 갱신 중 오류:", refreshError);
+        }
       } else {
         // 새 게시물 작성
         if (!user) {
@@ -627,8 +660,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       // 모달 닫기 및 데이터 새로고침
       setIsModalOpen(false);
       setPostToEdit(null); // 수정 데이터 초기화
-      refreshPosts();
-      refreshBookmarks();
+      
+      // 데이터 새로고침은 selectedPost 업데이트 이후에 수행
+      setTimeout(() => {
+        refreshPosts();
+        refreshBookmarks();
+      }, 100);
     } catch (error) {
       showToast('게시물 저장 중 오류가 발생했습니다.', 'error');
       console.error("게시물 저장 중 오류:", error);

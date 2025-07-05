@@ -125,6 +125,8 @@ export const usePosts = (options?: { category?: string; tag?: string }) => {
       const category = options?.category;
       const tag = options?.tag;
 
+      console.log("게시물 데이터 새로고침 시작...");
+      
       if (tag) {
         postsData = await fetchPostsByTag(tag);
       } else if (category && category !== 'all') {
@@ -133,9 +135,12 @@ export const usePosts = (options?: { category?: string; tag?: string }) => {
         postsData = await fetchPosts();
       }
       setPosts(postsData);
+      console.log("게시물 데이터 새로고침 완료:", postsData.length, "개");
+      return postsData; // Promise로 결과 반환
     } catch (err) {
       console.error('새로고침 중 오류:', err);
       setError(err instanceof Error ? err : new Error('데이터를 새로고침하는 중 오류가 발생했습니다.'));
+      throw err; // 오류 전파
     } finally {
       setLoading(false);
     }
