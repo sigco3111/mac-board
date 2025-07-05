@@ -17,11 +17,11 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
-  categories, 
+  categories = [], // 기본값으로 빈 배열 설정 
   selectedCategory, 
   onSelectCategory, 
   onNewPost, 
-  allTags, 
+  allTags = [], // 기본값으로 빈 배열 설정
   selectedTag, 
   onSelectTag,
   showBookmarks = false
@@ -95,6 +95,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     }, 10);
   }, [onNewPost, clearSelection]);
 
+  // categories와 allTags의 안전한 처리를 위한 확인
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeAllTags = Array.isArray(allTags) ? allTags : [];
+
   return (
     <div className="w-60 flex-shrink-0 bg-slate-100/80 p-3 flex flex-col h-full backdrop-blur-md border-r border-slate-200">
       {/* 북마크 토글 버튼 제거 */}
@@ -102,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="text-xs font-semibold text-slate-500 px-3 pt-4 pb-2">카테고리</div>
       <nav>
         <ul>
-          {categories.map((category) => (
+          {safeCategories.map((category) => (
             <li key={category.id}>
               <button
                 onClick={(e) => handleSelectCategory(e, category.id)}
@@ -125,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="text-xs font-semibold text-slate-500 px-3 pt-6 pb-2">태그</div>
       <nav className="flex-grow overflow-y-auto">
          <ul className="space-y-1">
-          {allTags.map((tag) => (
+          {safeAllTags.map((tag) => (
             <li key={tag}>
               <button
                 onClick={(e) => handleSelectTag(e, tag)}

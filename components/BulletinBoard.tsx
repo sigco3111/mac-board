@@ -273,20 +273,47 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
 
   // 북마크된 게시물에서 사용된 카테고리 추출
   const bookmarkedCategories = useMemo(() => {
-    if (!showBookmarks) return categories; // 카테고리 데이터가 로드되지 않았을 경우 기본 카테고리 사용
+    // 기본 카테고리가 있는지 확인
+    const defaultAllCategory: Category = { 
+      id: 'all', 
+      name: '모든 게시물', 
+      icon: '📄' // 아이콘을 string으로 변경
+    };
+    
+    // 카테고리가 없거나 로드 중일 때는 기본 카테고리만 반환
+    if (!Array.isArray(categories) || categories.length === 0) {
+      console.log('카테고리가 로드되지 않았습니다. 기본 카테고리를 사용합니다.');
+      return [defaultAllCategory];
+    }
+
+    // 북마크 모드가 아니면 전체 카테고리 반환
+    if (!showBookmarks) {
+      return categories;
+    }
+    
+    // 안전성 검사 추가
+    if (!Array.isArray(bookmarkedPosts)) {
+      console.error('bookmarkedPosts가 배열이 아닙니다:', bookmarkedPosts);
+      return categories;
+    }
     
     // 북마크된 게시물에서 사용된 카테고리 ID 추출
     const categoryIds = new Set<string>();
     bookmarkedPosts.forEach(post => {
-      if (post.category) {
+      if (post && post.category) {
         categoryIds.add(post.category);
       }
     });
     
-    // '전체' 카테고리는 항상 포함
+    // 필터링된 카테고리 목록 생성
+    const firstCategory = categories[0] || defaultAllCategory;
     const filteredCategories = [
-      categories[0], // '모든 게시물' 카테고리
-      ...categories.slice(1).filter(category => categoryIds.has(category.id))
+      firstCategory, // '모든 게시물' 카테고리
+      ...categories.slice(1).filter(category => 
+        category && 
+        category.id && 
+        categoryIds.has(category.id)
+      )
     ];
     
     return filteredCategories;
