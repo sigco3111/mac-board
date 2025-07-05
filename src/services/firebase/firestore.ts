@@ -24,12 +24,12 @@ import {
 import { db } from './config';
 import type { Post, UIPost, Comment, UIComment } from '../../types/index';
 
-// Firestore 컬렉션 이름
+// 컬렉션 및 문서 ID 상수
 const POSTS_COLLECTION = 'posts';
+const COMMENTS_COLLECTION = 'comments';
 const BOOKMARKS_COLLECTION = 'bookmarks';
 const SETTINGS_COLLECTION = 'settings';
-const COMMENTS_COLLECTION = 'comments';
-const USERS_COLLECTION = 'users';
+const GLOBAL_SETTINGS_ID = 'global-settings';
 
 // 에러 발생 시 최대 재시도 횟수
 const MAX_RETRY_COUNT = 3;
@@ -898,4 +898,73 @@ export const fetchUpdatedPostsByDateRange = async (startDate: string, endDate: s
   }
   
   throw new Error(`기간 내 수정 게시물을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.`);
+}; 
+
+/**
+ * Firestore에서 카테고리 목록을 가져오는 함수
+ * @returns 카테고리 목록
+ */
+export const fetchCategoriesFromFirestore = async (): Promise<{ id: string; name: string; icon?: string }[]> => {
+  let attempts = 0;
+  
+  console.log('Firestore에서 카테고리 목록 조회 시작');
+  
+  while (attempts < MAX_RETRY_COUNT) {
+    try {
+      attempts++;
+      console.log(`카테고리 목록 조회 시도 ${attempts}/${MAX_RETRY_COUNT}`);
+      
+      const settingsRef = doc(db, SETTINGS_COLLECTION, GLOBAL_SETTINGS_ID);
+      const settingsSnap = await getDoc(settingsRef);
+      
+      if (!settingsSnap.exists()) {
+        console.error('설정 문서가 존재하지 않습니다. 초기 설정이 필요합니다.');
+        
+        // 초기 설정 문서 생성 시도
+        try {
+          console.log('설정 문서 생성 시도...');
+          await setDoc(settingsRef, {
+            categories: [
+              { id: 'general', name: '자유게시판', icon: '📝' },
+              { id: 'tech', name: '기술', icon: '💻' }
+            ],
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now()
+          });
+          console.log('설정 문서가 생성되었습니다.');
+          
+          // 새로 생성된 카테고리 반환
+          return [
+            { id: 'general', name: '자유게시판', icon: '📝' },
+            { id: 'tech', name: '기술', icon: '💻' }
+          ];
+        } catch (initError) {
+          console.error('설정 문서 초기화 실패:', initError);
+          throw new Error(`설정 초기화에 실패했습니다: ${initError instanceof Error ? initError.message : '알 수 없는 오류'}`);
+        }
+      }
+      
+      const settingsData = settingsSnap.data();
+      const categories = settingsData.categories || [];
+      
+      console.log(`카테고리 목록 조회 성공: ${categories.length}개 카테고리 발견`);
+      
+      // 카테고리 정렬 (기본 카테고리를 먼저 표시)
+      return categories.map((cat: any) => ({
+        id: cat.id,
+        name: cat.name,
+        icon: cat.icon // 아이콘 필드 추가
+      }));
+    } catch (error) {
+      console.error(`카테고리 조회 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
+      
+      if (attempts >= MAX_RETRY_COUNT) {
+        throw new Error('카테고리 목록을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.');
+      }
+      
+      await delay(attempts);
+    }
+  }
+  
+  throw new Error('카테고리 목록을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.');
 }; 

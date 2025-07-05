@@ -91,10 +91,14 @@ const CategoryManagement: React.FC = () => {
       // 로딩 상태 메시지 표시
       setSuccessMessage('카테고리를 추가하는 중입니다...');
       
+      console.log(`카테고리 추가 요청: ${newCategoryName.trim()}, 아이콘: ${newCategoryIcon || '없음'}`);
+      
       await addCategory({ 
         name: newCategoryName.trim(),
         icon: newCategoryIcon || undefined
       });
+      
+      console.log('카테고리 추가 API 호출 성공, 목록 다시 불러오는 중...');
       await loadCategories();
       setNewCategoryName('');
       setNewCategoryIcon('');
@@ -112,6 +116,14 @@ const CategoryManagement: React.FC = () => {
         );
       } else {
         setError(`카테고리 추가에 실패했습니다: ${errorMsg}`);
+      }
+      
+      // 에러 발생 후 목록 다시 불러오기 시도
+      console.log('에러 발생 후 카테고리 목록 다시 불러오는 중...');
+      try {
+        await loadCategories();
+      } catch (loadErr) {
+        console.error('에러 후 카테고리 목록 로드 실패:', loadErr);
       }
     } finally {
       setIsLoading(false);

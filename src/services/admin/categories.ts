@@ -53,6 +53,21 @@ const delay = (attempts: number) => {
 };
 
 /**
+ * 오류 메시지를 안전하게 문자열로 변환하는 함수
+ * @param error 오류 객체
+ * @returns 문자열화된 오류 메시지
+ */
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return '알 수 없는 오류';
+};
+
+/**
  * 카테고리 인터페이스
  */
 export interface CategoryItem {
@@ -96,7 +111,7 @@ export const fetchCategories = async (): Promise<CategoryItem[]> => {
       console.error(`카테고리 조회 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
       
       // resource-exhausted 에러인 경우 재시도
-      const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorMsg = getErrorMessage(error);
       if (errorMsg.includes('resource-exhausted') && attempts < MAX_RETRY_COUNT) {
         console.log(`Firebase 쿼터 초과로 인한 재시도: ${attempts}/${MAX_RETRY_COUNT}`);
         await delay(attempts);
@@ -142,6 +157,8 @@ export const addCategory = async (category: Omit<CategoryItem, 'id'>): Promise<s
         throw new Error('유효한 카테고리 ID를 생성할 수 없습니다. 카테고리 이름을 확인해주세요.');
       }
 
+      console.log(`카테고리 추가 시도: ${category.name} (ID: ${newId})`);
+
       // 설정 문서 참조
       const settingsRef = doc(db, SETTINGS_COLLECTION, GLOBAL_SETTINGS_ID);
       
@@ -149,11 +166,44 @@ export const addCategory = async (category: Omit<CategoryItem, 'id'>): Promise<s
       const settingsSnap = await getDoc(settingsRef);
       
       if (!settingsSnap.exists()) {
-        throw new Error(NOT_FOUND_ERROR);
+        console.error('설정 문서가 존재하지 않습니다. 초기 설정이 필요합니다.');
+        
+        // 초기 설정 문서 생성 시도
+        try {
+          await setDoc(settingsRef, {
+            categories: [],
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now()
+          });
+          console.log('설정 문서가 생성되었습니다.');
+          
+          // 새로운 카테고리 추가를 위해 빈 배열로 계속 진행
+          const newCategory: CategoryItem = { 
+            id: newId, 
+            name: category.name
+          };
+          
+          if (category.icon !== undefined) {
+            newCategory.icon = category.icon;
+          }
+          
+          await updateDoc(settingsRef, {
+            categories: [newCategory],
+            updatedAt: Timestamp.now()
+          });
+          
+          console.log(`카테고리 '${category.name}' 추가 성공 (ID: ${newId})`);
+          return newId;
+        } catch (initError) {
+          console.error('설정 문서 초기화 실패:', initError);
+          throw new Error(`설정 초기화에 실패했습니다: ${getErrorMessage(initError)}`);
+        }
       }
       
       const settingsData = settingsSnap.data();
       const categories = settingsData.categories || [];
+      
+      console.log(`현재 카테고리 수: ${categories.length}`);
       
       // 2. 중복 ID 검사
       if (categories.some((cat: CategoryItem) => cat.id === newId)) {
@@ -171,8 +221,8 @@ export const addCategory = async (category: Omit<CategoryItem, 'id'>): Promise<s
         name: category.name
       };
       
-      // 아이콘이 제공된 경우 추가
-      if (category.icon) {
+      // 아이콘이 제공된 경우 추가 (빈 문자열도 유효한 값으로 처리)
+      if (category.icon !== undefined) {
         newCategory.icon = category.icon;
       }
       
@@ -187,7 +237,8 @@ export const addCategory = async (category: Omit<CategoryItem, 'id'>): Promise<s
         updatedAt: now
       });
       
-      console.log(`카테고리 '${category.name}' 추가 성공 (ID: ${newId})`);
+      const iconText = typeof category.icon === 'string' ? category.icon : '없음';
+      console.log(`카테고리 '${category.name}' 추가 성공 (ID: ${newId}, 아이콘: ${iconText})`);
       
       // 명시적 타입 변환 없이 문자열 반환
       return newId;
@@ -196,7 +247,7 @@ export const addCategory = async (category: Omit<CategoryItem, 'id'>): Promise<s
       console.error(`카테고리 추가 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
       
       // resource-exhausted 에러인 경우 재시도
-      const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorMsg = getErrorMessage(error);
       if (errorMsg.includes('resource-exhausted') && attempts < MAX_RETRY_COUNT) {
         console.log(`Firebase 쿼터 초과로 인한 재시도: ${attempts}/${MAX_RETRY_COUNT}`);
         await delay(attempts);
@@ -300,7 +351,7 @@ export const updateCategory = async (
       console.error(`카테고리 수정 오류 (ID: ${categoryId}, 시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
       
       // resource-exhausted 에러인 경우 재시도
-      const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorMsg = getErrorMessage(error);
       if (errorMsg.includes('resource-exhausted') && attempts < MAX_RETRY_COUNT) {
         console.log(`Firebase 쿼터 초과로 인한 재시도: ${attempts}/${MAX_RETRY_COUNT}`);
         await delay(attempts);
@@ -388,7 +439,7 @@ export const deleteCategory = async (categoryId: string): Promise<boolean> => {
       console.error(`카테고리 삭제 오류 (ID: ${categoryId}, 시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
       
       // resource-exhausted 에러인 경우 재시도
-      const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorMsg = getErrorMessage(error);
       if (errorMsg.includes('resource-exhausted') && attempts < MAX_RETRY_COUNT) {
         console.log(`Firebase 쿼터 초과로 인한 재시도: ${attempts}/${MAX_RETRY_COUNT}`);
         await delay(attempts);
@@ -460,7 +511,7 @@ export const reorderCategories = async (sortedCategories: CategoryItem[]): Promi
       console.error(`카테고리 순서 변경 오류 (시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
       
       // resource-exhausted 에러인 경우 재시도
-      const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorMsg = getErrorMessage(error);
       if (errorMsg.includes('resource-exhausted') && attempts < MAX_RETRY_COUNT) {
         console.log(`Firebase 쿼터 초과로 인한 재시도: ${attempts}/${MAX_RETRY_COUNT}`);
         await delay(attempts);

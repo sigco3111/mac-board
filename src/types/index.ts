@@ -65,8 +65,8 @@ export interface UIComment {
 
 export interface Category {
   id: string;
-  name:string;
-  icon: React.ReactNode;
+  name: string;
+  icon?: string;  // 아이콘 (이모지 또는 아이콘 ID)
 }
 
 export type MenuItem =

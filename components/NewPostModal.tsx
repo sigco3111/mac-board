@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Category, Post } from '../types';
+import type { Category, Post } from '../src/types';
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';

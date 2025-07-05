@@ -11,8 +11,7 @@ import Toast from './Toast';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
 import { usePosts } from '../src/hooks/usePosts';
 import { useBookmarks } from '../src/hooks/useBookmarks';
-import { deletePost, updatePost, createPost, movePost } from '../src/services/firebase/firestore';
-import { fetchCategories as fetchCategoriesFromFirestore } from '../src/services/admin/categories';
+import { deletePost, updatePost, createPost, movePost, fetchCategoriesFromFirestore } from '../src/services/firebase/firestore';
 
 // 기본 카테고리 데이터 (Firestore 로드 전에 임시로 사용)
 const defaultCategories: Category[] = [
@@ -38,6 +37,9 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   const [postToEdit, setPostToEdit] = useState<UIPost | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   
+  // 모바일 상세 뷰 상태 추가
+  const [isMobileDetailView, setIsMobileDetailView] = useState(false);
+  
   // 토스트 메시지 상태 추가
   const [toast, setToast] = useState<{
     message: string;
@@ -62,9 +64,13 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
           ...categoriesData.map(cat => ({
             id: cat.id,
             name: cat.name,
-            // 카테고리에 맞는 아이콘 설정
-            icon: cat.id === 'tech' ? <FolderIcon /> : 
-                 cat.id === 'general' ? <TagIcon /> : <FolderIcon />
+            // 카테고리에 설정된 아이콘 사용
+            icon: cat.icon ? (
+              <span className="text-lg">{cat.icon}</span>
+            ) : (
+              cat.id === 'tech' ? <FolderIcon /> : 
+              cat.id === 'general' ? <TagIcon /> : <FolderIcon />
+            )
           }))
         ];
         
@@ -194,7 +200,18 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   // 게시물 선택 및 상세 표시 관련 상태 및 함수
   const [selectedPost, setSelectedPost] = useState<UIPost | null>(null);
   const handleSelectPost = useCallback((post: UIPost) => {
+    console.log('게시물 선택됨:', post.id, post.title);
     setSelectedPost(post);
+    // 모바일에서는 상세 페이지로 전환
+    if (window.innerWidth < 768) {
+      setIsMobileDetailView(true);
+    }
+  }, []);
+
+  // 선택된 게시물 초기화
+  const handleDeselectPost = useCallback(() => {
+    setSelectedPost(null);
+    setIsMobileDetailView(false);
   }, []);
   
   // 로딩 및 에러 상태 통합
@@ -471,6 +488,8 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   
   // 카테고리 선택 처리
   const handleSelectCategory = useCallback((categoryId: string) => {
+    console.log('카테고리 선택:', categoryId);
+    
     // 선택 초기화
     clearSelection();
     
@@ -478,22 +497,29 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     setTimeout(() => {
       setSelectedCategory(categoryId);
       setSelectedTag(null); // 태그 선택 초기화
+      setSelectedPost(null); // 선택된 게시물 초기화
       
       // 북마크 모드일 때 북마크 데이터 새로고침
       if (showBookmarks) {
         refreshBookmarks();
+      } else {
+        // 일반 모드일 때 해당 카테고리 게시물 로드
+        refreshPosts();
       }
     }, 20);
-  }, [showBookmarks, clearSelection, refreshBookmarks]);
+  }, [showBookmarks, clearSelection, refreshBookmarks, refreshPosts]);
 
   // 태그 선택 처리
   const handleSelectTag = useCallback((tag: string | null) => {
+    console.log('태그 선택:', tag);
+    
     // 선택 초기화
     clearSelection();
     
     // 북마크 모드 유지하면서 태그 변경
     setTimeout(() => {
       setSelectedTag(tag); // 태그 선택 또는 해제
+      setSelectedPost(null); // 선택된 게시물 초기화
       
       // 태그만 필터링할 때는 전체 카테고리로 설정
       if (tag) {
@@ -503,9 +529,12 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       // 북마크 모드일 때 북마크 데이터 새로고침
       if (showBookmarks) {
         refreshBookmarks();
+      } else {
+        // 일반 모드일 때 해당 태그 게시물 로드
+        refreshPosts();
       }
     }, 20);
-  }, [showBookmarks, clearSelection, refreshBookmarks]);
+  }, [showBookmarks, clearSelection, refreshBookmarks, refreshPosts]);
 
   // 게시물 작성 및 수정 관련 함수
   const handleOpenNewPost = useCallback(() => {

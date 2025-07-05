@@ -54,7 +54,9 @@ if (isDevelopment) {
     apiKeyExists: !!firebaseConfig.apiKey,
     authDomainExists: !!firebaseConfig.authDomain,
     projectIdExists: !!firebaseConfig.projectId,
-    appIdExists: !!firebaseConfig.appId
+    appIdExists: !!firebaseConfig.appId,
+    storageBucketExists: !!firebaseConfig.storageBucket,
+    messagingSenderIdExists: !!firebaseConfig.messagingSenderId
   });
 }
 
@@ -92,8 +94,8 @@ if (db) {
  * @returns {boolean} Firebase 설정 여부
  */
 export const isFirebaseConfigured = (): boolean => {
-  const { apiKey, authDomain, projectId } = firebaseConfig;
-  const isConfigured = Boolean(apiKey && authDomain && projectId);
+  const { apiKey, authDomain, projectId, appId } = firebaseConfig;
+  const isConfigured = Boolean(apiKey && authDomain && projectId && appId);
   if (isDevelopment) {
     console.log('Firebase 설정 완료 여부:', isConfigured);
   }
