@@ -19,9 +19,7 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
   const [content, setContent] = useState('');
   const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
   
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [allVisibleTags, setAllVisibleTags] = useState<string[]>([]);
-  const [newTagInput, setNewTagInput] = useState('');
+  const [tags, setTags] = useState(''); // 태그 상태를 문자열로 변경
 
   const isEditing = postToEdit != null;
 
@@ -30,13 +28,13 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
       setTitle(postToEdit.title);
       setCategory(postToEdit.category);
       setContent(postToEdit.content.replace(/<[^>]+>/g, '')); // Basic HTML tag stripping
-      setSelectedTags(postToEdit.tags || []);
+      setTags(postToEdit.tags ? postToEdit.tags.join(', ') : ''); // 배열을 쉼표로 구분된 문자열로 변환
     } else {
       // Reset form for new post
       setTitle('');
       setCategory(selectedCategory || categories[0]?.id || '');
       setContent('');
-      setSelectedTags([]);
+      setTags(''); // 태그 초기화
     }
   }, [postToEdit, isEditing, categories, selectedCategory]);
 
@@ -57,40 +55,14 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
     };
   }, []);
 
-  useEffect(() => {
-    // Combine passed `allTags` with the currently `selectedTags` to form the list of all visible tags
-    setAllVisibleTags([...new Set([...allTags, ...selectedTags])].sort());
-  }, [allTags, selectedTags]);
-
-  const handleToggleTag = (tag: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const handleAddNewTag = () => {
-    const newTag = newTagInput.trim();
-    if (newTag && !selectedTags.includes(newTag)) {
-      setSelectedTags(prev => [...prev, newTag]); // This will trigger the effect above
-    }
-    setNewTagInput('');
-  };
-
-  const handleNewTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddNewTag();
-    }
-  };
-  
-  const handleRemoveSelectedTag = (tagToRemove: string) => {
-      setSelectedTags(prev => prev.filter(tag => tag !== tagToRemove));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim() || !category) return;
-    onSave({ title, category, content, tags: selectedTags });
+    
+    // 쉼표로 구분된 태그 문자열을 배열로 변환
+    const finalTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+    
+    onSave({ title, category, content, tags: finalTags });
     onClose();
   };
 
@@ -131,60 +103,15 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
             
             {/* TAGS SECTION */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">태그</label>
-              
-              <div className="flex flex-wrap items-center gap-2 p-2 mb-2 bg-slate-50 border border-slate-200 rounded-md min-h-[44px]">
-                {selectedTags.length === 0 ? (
-                    <span className="text-sm text-slate-400 px-1">아래에서 태그를 선택하거나 새 태그를 추가하세요.</span>
-                ) : (
-                    selectedTags.map(tag => (
-                      <span key={tag} className="flex items-center gap-1 bg-blue-500 text-white text-sm font-medium pl-2.5 pr-1.5 py-1 rounded-full">
-                        {tag}
-                        <button type="button" onClick={() => handleRemoveSelectedTag(tag)} className="text-white/70 hover:text-white rounded-full hover:bg-black/20 p-0.5 transition-colors">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                      </span>
-                    ))
-                )}
-              </div>
-
-              <div className="flex gap-2 mb-2">
-                <input
-                  id="tags-input"
-                  type="text"
-                  value={newTagInput}
-                  onChange={(e) => setNewTagInput(e.target.value)}
-                  onKeyDown={handleNewTagKeyDown}
-                  className="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="새 태그 추가 후 Enter 또는 추가 버튼"
-                />
-                 <button
-                  type="button"
-                  onClick={handleAddNewTag}
-                  className="px-4 text-sm font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded-md shadow-sm hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  추가
-                </button>
-              </div>
-
-              {allVisibleTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-2 border border-slate-200 rounded-md max-h-32 overflow-y-auto">
-                    {allVisibleTags.map(tag => (
-                    <button
-                        type="button"
-                        key={tag}
-                        onClick={() => handleToggleTag(tag)}
-                        className={`text-sm font-medium px-2.5 py-1 rounded-full transition-all duration-150 ${
-                        selectedTags.includes(tag)
-                            ? 'bg-blue-500 text-white shadow'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                    >
-                        {selectedTags.includes(tag) ? `✓ ${tag}` : `+ ${tag}`}
-                    </button>
-                    ))}
-                </div>
-              )}
+              <label htmlFor="tags-input" className="block text-sm font-medium text-slate-700 mb-1">태그</label>
+              <input
+                id="tags-input"
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                className="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="쉼표(,)로 구분하여 태그를 입력하세요."
+              />
             </div>
 
             <div>
