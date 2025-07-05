@@ -9,9 +9,9 @@ import WindowMenuBar from './WindowMenuBar';
 import ConfirmationModal from './ConfirmationModal';
 import Toast from './Toast';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
-import { usePosts } from '../src/hooks/usePosts';
+import { usePosts } from '../src/hooks/usePosts.tsx';
 import { useBookmarks } from '../src/hooks/useBookmarks';
-import { deletePost, updatePost, createPost, movePost, fetchCategoriesFromFirestore } from '../src/services/firebase/firestore';
+import { deletePost, updatePost, createPost, movePost } from '../src/services/firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 
 // 기본 카테고리 데이터 (Firestore 로드 전에 임시로 사용)
@@ -26,9 +26,6 @@ interface BulletinBoardProps {
 }
 
 const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialShowBookmarks = false }) => {
-  // 카테고리 상태를 동적 데이터로 변경
-  const [categories, setCategories] = useState<Category[]>(defaultCategories);
-  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [showBookmarks, setShowBookmarks] = useState<boolean>(initialShowBookmarks);
@@ -52,52 +49,19 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     visible: false
   });
 
-  // Firestore에서 카테고리 데이터 로드
-  useEffect(() => {
-    const loadCategories = async () => {
-      setCategoriesLoading(true);
-      try {
-        const categoriesData = await fetchCategoriesFromFirestore();
-        
-        // Firestore에서 가져온 카테고리 데이터를 UI 컴포넌트에 맞게 변환
-        const uiCategories: Category[] = [
-          { id: 'all', name: '모든 게시물', icon: <MessagesSquareIcon /> },
-          ...categoriesData.map(cat => ({
-            id: cat.id,
-            name: cat.name,
-            // 카테고리에 설정된 아이콘 사용
-            icon: cat.icon ? (
-              <span className="text-lg">{cat.icon}</span>
-            ) : (
-              cat.id === 'tech' ? <FolderIcon /> : 
-              cat.id === 'general' ? <TagIcon /> : <FolderIcon />
-            )
-          }))
-        ];
-        
-        // 카테고리 중복 제거 (id 기준)
-        const uniqueCategories = uiCategories.filter(
-          (cat, index, self) => index === self.findIndex(c => c.id === cat.id)
-        );
-        
-        setCategories(uniqueCategories);
-      } catch (error) {
-        console.error("카테고리 데이터 로드 중 오류 발생:", error);
-        // 에러 시 기본 카테고리라도 보여주기
-        if (categories.length <= 1) {
-          setCategories([
-            { id: 'all', name: '모든 게시물', icon: <MessagesSquareIcon /> },
-            { id: 'general', name: '자유게시판', icon: <TagIcon /> },
-            { id: 'tech', name: '기술', icon: <FolderIcon /> }
-          ]);
-        }
-      } finally {
-        setCategoriesLoading(false);
-      }
-    };
-    
-    loadCategories();
-  }, []);
+  // 데이터 로딩을 usePosts 훅에 위임
+  const {
+    posts: fetchedPosts,
+    loading: postsLoading,
+    error: postsError,
+    categories,
+    categoriesLoading,
+    allTags, // This is the correct 'allTags' from the hook
+    refresh: refreshPosts,
+  } = usePosts({
+    category: selectedCategory, // 'all'을 그대로 전달
+    tag: selectedTag || undefined,
+  });
 
   // 토스트 메시지 표시 함수
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -186,17 +150,6 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     error: bookmarkError,
     refresh: refreshBookmarks
   } = useBookmarks(user?.uid);
-
-  // Firebase에서 게시물 데이터 가져오기
-  const { 
-    posts: fetchedPosts, 
-    loading: postsLoading, 
-    error: postsError, 
-    refresh: refreshPosts 
-  } = usePosts({
-    category: selectedCategory === 'all' ? undefined : selectedCategory,
-    tag: selectedTag || undefined
-  });
   
   // 게시물 선택 및 상세 표시 관련 상태 및 함수
   const [selectedPost, setSelectedPost] = useState<UIPost | null>(null);
@@ -339,24 +292,6 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     return filteredCategories;
   }, [showBookmarks, bookmarkedPosts, categories]);
 
-  // 게시물 태그 목록 추출
-  const allTags = useMemo(() => {
-    const tagsSet = new Set<string>();
-    const postsToUse = showBookmarks ? bookmarkedPosts : posts;
-    
-    postsToUse.forEach(post => {
-      if (post.tags && Array.isArray(post.tags)) {
-        post.tags.forEach(tag => {
-          if (tag) {
-            tagsSet.add(tag);
-          }
-        });
-      }
-    });
-    
-    return Array.from(tagsSet).sort();
-  }, [showBookmarks, bookmarkedPosts, posts]);
-  
   // 현재 선택된 카테고리에서 사용 가능한 태그 목록 추출
   const availableTags = useMemo(() => {
     if (selectedCategory === 'all') {
@@ -726,25 +661,33 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
           onSelectTag={handleSelectTag}
           showBookmarks={showBookmarks} 
         />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <PostList 
-            posts={filteredPosts} 
-            selectedPost={selectedPost} 
-            onSelectPost={handleSelectPost} 
-            loading={loading}
-            error={error?.message}
-          />
-          <div className="flex-1 overflow-auto bg-white">
-            <PostDetail 
-              post={selectedPost} 
-              onEdit={handleOpenEditModal} 
-              onDelete={requestDeletePost}
-              onMove={handleMovePost}
-              categories={categories.filter(cat => cat.id !== 'all')} // 'all' 카테고리는 제외
-              isPostOwner={isPostOwner(selectedPost)}
-              onRefresh={refreshPostData}
-              userId={user?.uid}
+        <div className="flex-1 flex flex-row overflow-hidden">
+          <div className="w-1/3 border-r border-slate-200/80 flex flex-col overflow-hidden">
+            <PostList 
+              posts={filteredPosts} 
+              selectedPost={selectedPost} 
+              onSelectPost={handleSelectPost} 
+              loading={loading}
+              error={error?.message}
             />
+          </div>
+          <div className="flex-1 overflow-auto bg-white">
+            {selectedPost ? (
+              <PostDetail 
+                post={selectedPost} 
+                onEdit={handleOpenEditModal} 
+                onDelete={requestDeletePost}
+                onMove={handleMovePost}
+                categories={categories.filter(cat => cat.id !== 'all')} // 'all' 카테고리는 제외
+                isPostOwner={isPostOwner(selectedPost)}
+                onRefresh={refreshPostData}
+                userId={user?.uid}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-500">
+                게시물을 선택하세요.
+              </div>
+            )}
           </div>
         </div>
       </main>
