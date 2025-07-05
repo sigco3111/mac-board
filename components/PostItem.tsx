@@ -41,46 +41,58 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
 
   // 북마크 상태에 따른 아이콘 설정
   const bookmarkFill = isBookmarked(post.id) ? 'currentColor' : 'none';
+  
+  // 날짜 간소화 표시 (MM.DD 형식)
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getMonth() + 1}.${date.getDate()}`;
+  };
 
   return (
     <li
       onClick={onClick}
-      className={`p-3 border-b border-slate-200 cursor-pointer transition-colors duration-150 ${
+      className={`py-2 px-3 border-b border-slate-200 cursor-pointer transition-colors duration-150 ${
         isSelected ? 'bg-blue-100/70' : 'hover:bg-slate-50'
       }`}
     >
-      <div className="flex justify-between items-start">
-        <div className="flex items-center space-x-3">
+      <div className="grid grid-cols-10 gap-2 w-full items-center">
+        {/* 프로필 이미지 (1/10) */}
+        <div className="col-span-1">
           <img 
             src={avatarUrl} 
             alt={post.author.name} 
-            className="w-8 h-8 rounded-full"
+            className="w-7 h-7 rounded-full"
             onError={(e) => {
-              // 이미지 로드 실패 시 기본 이미지로 대체
               (e.target as HTMLImageElement).src = defaultAvatar;
             }}
           />
-          <div>
-            <p className={`font-semibold text-sm ${isSelected ? 'text-blue-800' : 'text-slate-800'}`}>{post.author.name}</p>
-            <h3 className={`font-bold text-base ${isSelected ? 'text-slate-900' : 'text-slate-900'}`}>{post.title}</h3>
-          </div>
         </div>
-        <div className="flex flex-col items-end flex-shrink-0 ml-4">
-          <div className="flex items-center text-xs text-slate-500">
+        
+        {/* 제목 및 작성자 (6/10) */}
+        <div className="col-span-6 min-w-0 overflow-hidden pr-1">
+          <div className="flex items-center">
+            <p className={`font-medium text-xs ${isSelected ? 'text-blue-800' : 'text-slate-600'} truncate mr-2`}>{post.author.name}</p>
+            {post.isNew && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>}
+          </div>
+          <h3 className={`font-bold text-sm truncate ${isSelected ? 'text-slate-900' : 'text-slate-900'}`}>{post.title}</h3>
+        </div>
+        
+        {/* 댓글수, 날짜, 북마크 (3/10) */}
+        <div className="col-span-3 flex flex-col items-end justify-center h-full">
+          <div className="flex items-center text-xs text-slate-500 w-full justify-end">
             {post.comments > 0 && (
-              <div className="flex items-center text-slate-600 mr-3">
-                <MessagesSquareIcon className="w-3.5 h-3.5 mr-1" />
+              <div className="flex items-center text-slate-600 mr-2">
+                <MessagesSquareIcon className="w-3.5 h-3.5 mr-0.5 flex-shrink-0" />
                 <span>{post.comments}</span>
               </div>
             )}
-            <span>{new Date(post.date).toLocaleDateString()}</span>
+            <span className="whitespace-nowrap text-blue-600 font-medium">{formatDate(post.date)}</span>
           </div>
-          <div className="flex items-center mt-2">
-            {post.isNew && <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>}
+          <div className="flex items-center mt-1 justify-end">
             {user && (
               <button 
                 onClick={handleBookmarkToggle}
-                className="text-slate-600 hover:text-blue-500 transition-colors"
+                className={`transition-colors ${isBookmarked(post.id) ? 'text-blue-500' : 'text-slate-400 hover:text-blue-500'}`}
                 title={isBookmarked(post.id) ? "북마크 해제" : "북마크 추가"}
               >
                 <BookmarkIcon className="w-4 h-4" fill={bookmarkFill} />
