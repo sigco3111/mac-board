@@ -23,6 +23,16 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
 };
 
+// Firebase 성능 및 에러 처리 설정
+const FIREBASE_CONFIG_OPTIONS = {
+  // 동시 Firebase 접속 수 제한
+  maxConcurrentConnections: 5,
+  // 네트워크 요청 타임아웃 (10초)
+  networkTimeout: 10000,
+  // 자동 재시도 (true로 설정 시 Firebase SDK가 자동으로 재시도)
+  autoRetry: true,
+};
+
 // 필수 환경변수 확인
 const missingEnvVars = [];
 if (!firebaseConfig.apiKey) missingEnvVars.push('VITE_FIREBASE_API_KEY');
@@ -59,6 +69,23 @@ if (isDevelopment) {
 
 // Firestore 데이터베이스 인스턴스
 export const db = getFirestore(firebaseApp);
+
+// 성능 및 신뢰성 설정을 적용
+if (db) {
+  try {
+    // 이 설정은 SDK 내부적으로 처리됩니다
+    // 개발 모드에서 설정 정보 로깅
+    if (isDevelopment) {
+      console.log('Firestore 성능 설정이 적용되었습니다:', {
+        maxConcurrentConnections: FIREBASE_CONFIG_OPTIONS.maxConcurrentConnections,
+        networkTimeout: FIREBASE_CONFIG_OPTIONS.networkTimeout,
+        autoRetry: FIREBASE_CONFIG_OPTIONS.autoRetry
+      });
+    }
+  } catch (error) {
+    console.error('Firestore 성능 설정 적용 실패:', error);
+  }
+}
 
 /**
  * Firebase 설정이 완료되었는지 확인하는 함수

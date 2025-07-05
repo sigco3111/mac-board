@@ -61,10 +61,11 @@ window.addEventListener('error', (event) => {
 });
 
 // React 앱을 DOM에 마운트
+// StrictMode 비활성화 - react-beautiful-dnd와의 호환성 문제 해결을 위함
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
+  // <React.StrictMode> // react-beautiful-dnd와 충돌하여 일시적으로 비활성화
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </React.StrictMode>
+  // </React.StrictMode>
 ); 

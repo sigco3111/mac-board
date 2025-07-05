@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   fetchCategories, 
   addCategory, 
@@ -7,7 +7,8 @@ import {
   reorderCategories,
   CategoryItem
 } from '../../../services/admin/categories';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropWrapper } from './DragDropWrapper';
 
 /**
  * 카테고리 관리 컴포넌트
@@ -34,19 +35,38 @@ const CategoryManagement: React.FC = () => {
   /**
    * 카테고리 목록 불러오기
    */
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
-    try {
-      const data = await fetchCategories();
-      setCategories(data);
-    } catch (err) {
-      setError(`카테고리 목록을 불러오는 데 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
-    } finally {
-      setIsLoading(false);
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const data = await fetchCategories();
+        setCategories(data);
+        setIsLoading(false);
+        return; // 성공적으로 로드되면 함수 종료
+      } catch (err) {
+        console.error(`카테고리 목록 로드 실패 (시도 ${retryCount + 1}/${maxRetries}):`, err);
+        retryCount++;
+        
+        // 마지막 시도가 아니면 사용자에게 재시도 중임을 알림
+        if (retryCount < maxRetries) {
+          setSuccessMessage(`카테고리 목록을 다시 불러오는 중입니다... (${retryCount}/${maxRetries})`);
+          
+          // 잠시 대기 후 재시도
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        } else {
+          // 모든 시도 실패 시 에러 메시지 표시
+          const errorMsg = err instanceof Error ? err.message : '알 수 없는 오류';
+          setError(`카테고리 목록을 불러오는 데 실패했습니다: ${errorMsg}`);
+          setIsLoading(false);
+        }
+      }
     }
-  };
+  }, []);
 
   /**
    * 카테고리 추가 처리
@@ -63,12 +83,27 @@ const CategoryManagement: React.FC = () => {
     setError(null);
     
     try {
+      // 로딩 상태 메시지 표시
+      setSuccessMessage('카테고리를 추가하는 중입니다...');
+      
       await addCategory({ name: newCategoryName.trim() });
       await loadCategories();
       setNewCategoryName('');
       showSuccessMessage('카테고리가 성공적으로 추가되었습니다.');
     } catch (err) {
-      setError(`카테고리 추가에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+      console.error('카테고리 추가 실패:', err);
+      
+      // Firebase 쿼터 초과 에러인 경우 특별 메시지 제공
+      const errorMsg = err instanceof Error ? err.message : '알 수 없는 오류';
+      
+      if (errorMsg.includes('resource-exhausted') || errorMsg.includes('Quota exceeded')) {
+        setError(
+          '현재 Firebase 쿼터 제한으로 인해 카테고리를 추가할 수 없습니다. ' + 
+          '잠시 후 다시 시도해주세요. (일일 쿼터 제한에 도달했을 수 있습니다)'
+        );
+      } else {
+        setError(`카테고리 추가에 실패했습니다: ${errorMsg}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -158,50 +193,173 @@ const CategoryManagement: React.FC = () => {
   /**
    * 드래그 앤 드롭으로 순서 변경 처리
    */
-  const handleDragEnd = async (result: DropResult) => {
+  const handleDragEnd = useCallback(async (result: DropResult) => {
     // 드래그가 목적지로 끝나지 않은 경우
     if (!result.destination) {
       return;
     }
 
+    const sourceIndex = result.source.index;
+    const destIndex = result.destination.index;
+
     // 시스템 카테고리는 순서 변경 제한 (일단 화면에서만 제한)
     const systemCategories = ['general', 'tech', 'questions'];
     if (
-      systemCategories.includes(categories[result.source.index].id) || 
-      systemCategories.includes(categories[result.destination.index].id)
+      systemCategories.includes(categories[sourceIndex].id) || 
+      systemCategories.includes(categories[destIndex].id)
     ) {
       setError('기본 시스템 카테고리의 위치는 변경할 수 없습니다.');
       return;
     }
     
     // 위치가 변경되지 않은 경우
-    if (result.destination.index === result.source.index) {
+    if (destIndex === sourceIndex) {
       return;
     }
 
-    // 새 순서의 카테고리 배열 생성
-    const reordered = Array.from(categories);
-    const [removed] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, removed);
-    
-    // UI 먼저 업데이트
-    setCategories(reordered);
-    
-    // API 호출하여 DB에 반영
+    setIsLoading(true);
+
     try {
-      await reorderCategories(reordered);
+      // 새 순서의 카테고리 배열 생성
+      const updatedCategories = Array.from(categories);
+      const [removed] = updatedCategories.splice(sourceIndex, 1);
+      updatedCategories.splice(destIndex, 0, removed);
+      
+      // UI 먼저 업데이트
+      setCategories(updatedCategories);
+      
+      // API 호출하여 DB에 반영
+      await reorderCategories(updatedCategories);
       showSuccessMessage('카테고리 순서가 성공적으로 변경되었습니다.');
     } catch (err) {
       // 실패 시 원래 상태로 복구하고 에러 표시
-      loadCategories();
-      setError(`카테고리 순서 변경에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+      const errorMsg = err instanceof Error ? err.message : '알 수 없는 오류';
+      setError(`카테고리 순서 변경에 실패했습니다: ${errorMsg}`);
+      loadCategories(); // 원래 순서로 복구
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [categories, loadCategories]);
 
   // 컴포넌트 마운트 시 카테고리 목록 로드
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [loadCategories]);
+
+  // 카테고리 테이블 렌더링 함수
+  const renderCategoryTable = () => (
+    <div className="bg-gray-50 rounded border border-gray-200">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              ID
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              이름
+            </th>
+            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              작업
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {categories.map((category, index) => (
+            <Draggable 
+              key={category.id} 
+              draggableId={category.id} 
+              index={index}
+              isDragDisabled={['general', 'tech', 'questions'].includes(category.id)}
+            >
+              {(provided) => (
+                <tr
+                  ref={provided.innerRef}
+                  {...provided.draggableProps}
+                  {...provided.dragHandleProps}
+                  className={`
+                    ${['general', 'tech', 'questions'].includes(category.id) ? 'bg-gray-50' : ''}
+                    hover:bg-gray-50
+                  `}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {category.id}
+                    </div>
+                    {['general', 'tech', 'questions'].includes(category.id) && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        시스템
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {editingId === category.id ? (
+                      <input
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        className="w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="text-sm font-medium text-gray-900">
+                        {category.name}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {editingId === category.id ? (
+                      <>
+                        <button
+                          onClick={() => handleUpdateCategory(category.id)}
+                          className="text-indigo-600 hover:text-indigo-900 mr-2 disabled:opacity-50"
+                          disabled={isLoading}
+                        >
+                          저장
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                          disabled={isLoading}
+                        >
+                          취소
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {!['general', 'tech', 'questions'].includes(category.id) && (
+                          <>
+                            <button
+                              onClick={() => startEditing(category)}
+                              className="text-indigo-600 hover:text-indigo-900 mr-2 disabled:opacity-50"
+                              disabled={isLoading}
+                            >
+                              수정
+                            </button>
+                            <button
+                              onClick={() => confirmDelete(category.id)}
+                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                              disabled={isLoading}
+                            >
+                              삭제
+                            </button>
+                          </>
+                        )}
+                        {['general', 'tech', 'questions'].includes(category.id) && (
+                          <span className="text-gray-400">
+                            시스템 카테고리
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </Draggable>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-lg shadow p-6 max-w-4xl mx-auto">
@@ -219,180 +377,109 @@ const CategoryManagement: React.FC = () => {
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
           {error}
           <button 
-            className="ml-2 text-red-700 hover:text-red-900"
-            onClick={() => setError(null)}
+            className="ml-2 underline"
+            onClick={() => {
+              setError(null);
+              loadCategories();
+            }}
           >
-            ×
+            다시 시도
           </button>
         </div>
       )}
       
-      {/* 카테고리 추가 폼 */}
-      <form 
-        onSubmit={handleAddCategory} 
-        className="mb-8 flex items-center space-x-2"
-      >
-        <input
-          type="text"
-          value={newCategoryName}
-          onChange={(e) => setNewCategoryName(e.target.value)}
-          placeholder="새 카테고리 이름"
-          className="px-4 py-2 border rounded flex-grow"
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-          disabled={isLoading || !newCategoryName.trim()}
-        >
-          추가
-        </button>
+      {/* 새 카테고리 추가 폼 */}
+      <form onSubmit={handleAddCategory} className="mb-8">
+        <div className="flex items-center">
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="새 카테고리 이름"
+            className="flex-1 p-2 border border-gray-300 rounded mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            className={`bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={isLoading}
+          >
+            {isLoading ? '처리중...' : '저장'}
+          </button>
+        </div>
       </form>
       
-      {/* 카테고리 목록 */}
+      {/* 카테고리 목록 테이블 */}
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">카테고리 목록</h3>
+
+      {/* 로딩 중 표시 */}
       {isLoading && !categories.length ? (
-        <div className="text-center py-4">로딩 중...</div>
+        <div className="flex justify-center items-center p-6 bg-gray-50 border border-gray-200 rounded">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 mr-3"></div>
+          <p>카테고리 로딩 중...</p>
+        </div>
+      ) : categories.length > 0 ? (
+        <DragDropWrapper onDragEnd={handleDragEnd} droppableId="categories">
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {renderCategoryTable()}
+              {provided.placeholder}
+            </div>
+          )}
+        </DragDropWrapper>
       ) : (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="categories">
-            {(provided) => (
-              <ul
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="border rounded divide-y"
-              >
-                {categories.map((category, index) => (
-                  <Draggable 
-                    key={category.id} 
-                    draggableId={category.id} 
-                    index={index}
-                    isDragDisabled={['general', 'tech', 'questions'].includes(category.id)}
-                  >
-                    {(provided) => (
-                      <li
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={`p-4 flex items-center justify-between ${
-                          ['general', 'tech', 'questions'].includes(category.id) 
-                            ? 'bg-gray-50' 
-                            : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        {/* 시스템 카테고리 표시 또는 수정 폼 */}
-                        {editingId === category.id ? (
-                          <div className="flex-1 flex items-center space-x-2">
-                            <input
-                              type="text"
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              className="px-3 py-1 border rounded flex-grow"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleUpdateCategory(category.id)}
-                              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                              disabled={isLoading}
-                            >
-                              저장
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
-                              disabled={isLoading}
-                            >
-                              취소
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium flex-grow">{category.name}</span>
-                            {['general', 'tech', 'questions'].includes(category.id) && (
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">시스템</span>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* 카테고리 ID 표시 */}
-                        <div className="text-xs text-gray-500 mx-4">
-                          ID: {category.id}
-                        </div>
-                        
-                        {/* 작업 버튼 */}
-                        {!['general', 'tech', 'questions'].includes(category.id) && (
-                          <div className="flex items-center space-x-1">
-                            {/* 삭제 확인 모드 */}
-                            {deleteConfirmId === category.id ? (
-                              <>
-                                <span className="text-sm text-red-600 mr-2">정말 삭제하시겠습니까?</span>
-                                <button
-                                  onClick={() => handleDeleteCategory(category.id)}
-                                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                                  disabled={isLoading}
-                                >
-                                  확인
-                                </button>
-                                <button
-                                  onClick={cancelDelete}
-                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
-                                  disabled={isLoading}
-                                >
-                                  취소
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                {/* 편집 버튼 */}
-                                <button
-                                  onClick={() => startEditing(category)}
-                                  className="p-2 text-blue-500 hover:text-blue-700"
-                                  disabled={isLoading || editingId !== null}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                  </svg>
-                                </button>
-                                
-                                {/* 삭제 버튼 */}
-                                <button
-                                  onClick={() => confirmDelete(category.id)}
-                                  className="p-2 text-red-500 hover:text-red-700"
-                                  disabled={isLoading || editingId !== null}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    <line x1="10" y1="11" x2="10" y2="17"></line>
-                                    <line x1="14" y1="11" x2="14" y2="17"></line>
-                                  </svg>
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </ul>
-            )}
-          </Droppable>
-        </DragDropContext>
+        <div className="p-6 text-center bg-gray-50 border border-gray-200 rounded">
+          <p className="text-gray-500">등록된 카테고리가 없습니다.</p>
+        </div>
       )}
       
-      {/* 도움말 */}
-      <div className="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded">
-        <h3 className="font-bold mb-2">카테고리 관리 도움말</h3>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>카테고리는 게시물을 분류하는 데 사용됩니다.</li>
-          <li>시스템 카테고리(일반, 기술, 질문)는 수정 및 삭제할 수 없습니다.</li>
-          <li>카테고리 순서를 변경하려면 카테고리를 드래그하여 이동하세요.</li>
-          <li>카테고리를 삭제하면 해당 카테고리의 게시물은 '일반' 카테고리로 자동 이동됩니다.</li>
-          <li>카테고리 ID는 자동으로 생성되며 수정할 수 없습니다.</li>
-        </ul>
-      </div>
+      {/* 삭제 확인 모달 */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-medium mb-4">카테고리 삭제 확인</h3>
+            <p className="mb-6 text-gray-600">
+              이 카테고리를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                disabled={isLoading}
+              >
+                취소
+              </button>
+              <button
+                onClick={() => handleDeleteCategory(deleteConfirmId)}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 개발자용 디버그 정보 - 개발 환경에서만 표시 */}
+      {import.meta.env.DEV && (
+        <div className="mt-8 p-4 bg-gray-100 rounded text-xs text-gray-500">
+          <details>
+            <summary>디버그 정보</summary>
+            <pre className="mt-2 whitespace-pre-wrap">
+              {JSON.stringify({
+                categoriesCount: categories.length,
+                loading: isLoading,
+              }, null, 2)}
+            </pre>
+          </details>
+        </div>
+      )}
     </div>
   );
 };
