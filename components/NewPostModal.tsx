@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Category, Post } from '../src/types';
+import type { Category, Post, UIPost } from '../src/types';
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
@@ -8,7 +8,7 @@ interface NewPostModalProps {
   categories: Category[];
   onClose: () => void;
   onSave: (newPost: { title: string; category: string; content: string; tags: string[] }) => void;
-  postToEdit?: Post | null;
+  postToEdit?: Post | UIPost | null;
   allTags: string[];
   selectedCategory: string | null;
 }
@@ -24,17 +24,61 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
   const isEditing = postToEdit != null;
 
   useEffect(() => {
-    if (isEditing && postToEdit) {
-      setTitle(postToEdit.title);
-      setCategory(postToEdit.category);
-      setContent(postToEdit.content.replace(/<[^>]+>/g, '')); // Basic HTML tag stripping
-      setTags(postToEdit.tags ? postToEdit.tags.join(', ') : ''); // 배열을 쉼표로 구분된 문자열로 변환
-    } else {
-      // Reset form for new post
+    try {
+      if (isEditing && postToEdit) {
+        // 데이터 유효성 확인
+        if (!postToEdit.id) {
+          console.warn("수정할 게시물의 ID가 없습니다:", postToEdit);
+        }
+        
+        // 안전하게 값 설정 (undefined 체크 추가)
+        setTitle(postToEdit.title || '');
+        setCategory(postToEdit.category || categories[0]?.id || '');
+        
+        // content가 undefined인 경우 안전하게 처리
+        const postContent = postToEdit.content || '';
+        
+        try {
+          // HTML 태그 제거 (필요한 경우)
+          const cleanContent = postContent.replace(/<[^>]+>/g, '');
+          setContent(cleanContent);
+        } catch (error) {
+          console.error("콘텐츠 처리 중 오류:", error);
+          setContent(''); // 오류 발생 시 빈 문자열로 설정
+        }
+        
+        // 태그 설정: 배열을 쉼표로 구분된 문자열로 변환
+        try {
+          setTags(Array.isArray(postToEdit.tags) ? postToEdit.tags.join(', ') : '');
+        } catch (error) {
+          console.error("태그 처리 중 오류:", error);
+          setTags(''); // 오류 발생 시 빈 문자열로 설정
+        }
+        
+        // 디버깅용 로그 (문제 확인용)
+        console.log("수정 모드 - 게시물 데이터:", {
+          id: postToEdit.id || '[ID 없음]',
+          title: postToEdit.title || '[제목 없음]',
+          category: postToEdit.category || '[카테고리 없음]',
+          contentExists: !!postToEdit.content,
+          tagsExists: Array.isArray(postToEdit.tags),
+          tagsCount: Array.isArray(postToEdit.tags) ? postToEdit.tags.length : 0
+        });
+      } else {
+        // 새 게시물 작성 폼 초기화
+        setTitle('');
+        setCategory(selectedCategory || categories[0]?.id || '');
+        setContent('');
+        setTags(''); // 태그 초기화
+      }
+    } catch (error) {
+      // 최상위 예외 처리
+      console.error("게시물 데이터 처리 중 오류가 발생했습니다:", error);
+      // 기본값으로 폼 초기화
       setTitle('');
-      setCategory(selectedCategory || categories[0]?.id || '');
+      setCategory(categories[0]?.id || '');
       setContent('');
-      setTags(''); // 태그 초기화
+      setTags('');
     }
   }, [postToEdit, isEditing, categories, selectedCategory]);
 
@@ -57,13 +101,36 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || !category) return;
     
-    // 쉼표로 구분된 태그 문자열을 배열로 변환
-    const finalTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-    
-    onSave({ title, category, content, tags: finalTags });
-    onClose();
+    try {
+      // 필수 필드 유효성 검사
+      if (!title.trim() || !category) {
+        alert('제목과 카테고리는 필수 입력 항목입니다.');
+        return;
+      }
+      
+      // 내용 검증 (빈 문자열 방지)
+      const trimmedContent = content.trim();
+      if (!trimmedContent) {
+        alert('내용을 입력해주세요.');
+        return;
+      }
+      
+      // 쉼표로 구분된 태그 문자열을 배열로 변환
+      const finalTags = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+      
+      // 수정/저장 처리
+      onSave({ 
+        title: title.trim(), 
+        category, 
+        content: trimmedContent, 
+        tags: finalTags 
+      });
+      onClose();
+    } catch (error) {
+      console.error('게시물 저장 중 오류:', error);
+      alert('게시물 저장 중 오류가 발생했습니다.');
+    }
   };
 
   return (

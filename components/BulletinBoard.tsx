@@ -478,40 +478,97 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     setIsModalOpen(true);
   }, []);
 
-  const handleOpenEditModal = useCallback((post: UIPost) => {
-    setPostToEdit(post);
-    setIsModalOpen(true);
-  }, []);
+  const handleOpenEditModal = useCallback((postParam?: UIPost) => {
+    // 파라미터로 전달된 게시물이 있으면 그것을 사용하고,
+    // 없으면 현재 선택된 게시물(selectedPost)을 사용함
+    const post = postParam || selectedPost;
+    
+    if (!post) {
+      showToast('수정할 게시물을 먼저 선택해주세요.', 'error');
+      return;
+    }
+    
+    try {
+      // 디버그 로그 추가
+      console.log("수정할 게시물:", post.id, post.title);
+      
+      // 수정할 게시물 데이터 설정 - 모든 필드에 대해 null/undefined 체크 추가
+      const safePostData = {
+        ...post,
+        id: post.id || '', // ID는 필수
+        title: post.title || '',
+        content: post.content || '',
+        category: post.category || '',
+        tags: post.tags || [],
+        author: post.author || { name: '알 수 없음' },
+        authorId: post.authorId || '',
+      };
+      
+      // 유효성 검증 (필수 필드 확인)
+      if (!safePostData.id) {
+        throw new Error('게시물 ID가 유효하지 않습니다.');
+      }
+      
+      setPostToEdit(safePostData);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("게시물 수정 준비 중 오류:", error);
+      showToast('게시물 수정을 위한 데이터 준비 중 오류가 발생했습니다.', 'error');
+    }
+  }, [selectedPost, showToast]);
 
   const handleSavePost = useCallback(async (postData: { title: string; category: string; content: string; tags: string[] }) => {
     try {
       if (postToEdit) {
+        // postToEdit이 유효한지 확인
+        if (!postToEdit.id) {
+          throw new Error("유효하지 않은 게시물 ID입니다.");
+        }
+        
+        // 디버그 로그 추가
+        console.log("게시물 수정 시도:", {
+          id: postToEdit.id,
+          title: postData.title,
+          category: postData.category,
+          tagsCount: postData.tags?.length || 0,
+        });
+        
+        // updatePost 호출 시 필요한 최소 데이터만 전달
         await updatePost(postToEdit.id, {
-          ...postToEdit,
-          ...postData,
-          updatedAt: Timestamp.now(), // Firestore Timestamp로 수정
+          title: postData.title,
+          category: postData.category,
+          content: postData.content || '',  // null/undefined 체크
+          tags: Array.isArray(postData.tags) ? postData.tags : [],  // 배열 타입 확인
+          updatedAt: Timestamp.now(),
         }, user?.uid);
+        
         showToast('게시물이 수정되었습니다.', 'success');
       } else {
+        // 새 게시물 작성
         if (!user) {
           showToast('로그인이 필요합니다.', 'error');
           return;
         }
+        
         const newPost: Partial<Post> = {
           ...postData,
           author: {
             name: user.displayName || 'Anonymous',
           },
           authorId: user.uid,
-          createdAt: Timestamp.now(), // Firestore Timestamp로 수정
-          updatedAt: Timestamp.now(), // Firestore Timestamp로 수정
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
           commentCount: 0,
           viewCount: 0,
         };
+        
         await createPost(newPost);
         showToast('게시물이 작성되었습니다.', 'success');
       }
+      
+      // 모달 닫기 및 데이터 새로고침
       setIsModalOpen(false);
+      setPostToEdit(null); // 수정 데이터 초기화
       refreshPosts();
       refreshBookmarks();
     } catch (error) {
@@ -600,7 +657,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
         items: [
           { 
             label: '게시물 수정...', 
-            action: handleOpenEditModal, 
+            action: () => handleOpenEditModal(), // 인자 없이 호출하면 내부에서 selectedPost를 사용함
             disabled: !isPostSelected || !canEditOrDelete 
           },
           { 

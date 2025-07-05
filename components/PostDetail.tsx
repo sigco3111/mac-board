@@ -10,7 +10,7 @@ import CommentSection from './CommentSection';
 interface PostDetailProps {
   post: UIPost | null;
   onSelectTag: (tag: string | null) => void;
-  onEditPost?: () => void;
+  onEditPost?: (post: UIPost) => void; // 게시물 객체를 매개변수로 전달
   onDeletePost?: () => void;
   // 추가 props
   isPostOwner?: boolean;
@@ -75,7 +75,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
             {canEditDelete && onEditPost && onDeletePost && (
               <div className="flex space-x-2">
                 <button 
-                  onClick={onEditPost}
+                  onClick={() => post && onEditPost(post)}
                   className="p-1.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
                   title="게시물 수정"
                 >
