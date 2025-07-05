@@ -755,6 +755,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
           onSave={handleSavePost}
           postToEdit={postToEdit}
           allTags={allTags}
+          selectedCategory={selectedCategory === 'all' ? null : selectedCategory}
         />
       )}
       {isDeleteModalOpen && selectedPost && (

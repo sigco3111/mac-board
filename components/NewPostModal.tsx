@@ -10,11 +10,12 @@ interface NewPostModalProps {
   onSave: (newPost: { title: string; category: string; content: string; tags: string[] }) => void;
   postToEdit?: Post | null;
   allTags: string[];
+  selectedCategory: string | null;
 }
 
-const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave, postToEdit, allTags }) => {
+const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave, postToEdit, allTags, selectedCategory }) => {
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(categories[0]?.id || '');
+  const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
   const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
   
@@ -33,11 +34,11 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
     } else {
       // Reset form for new post
       setTitle('');
-      setCategory(categories[0]?.id || '');
+      setCategory(selectedCategory || categories[0]?.id || '');
       setContent('');
       setSelectedTags([]);
     }
-  }, [postToEdit, isEditing, categories]);
+  }, [postToEdit, isEditing, categories, selectedCategory]);
 
   // 시스템 다크 모드 감지
   useEffect(() => {
