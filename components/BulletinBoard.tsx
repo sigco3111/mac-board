@@ -719,7 +719,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
           showBookmarks={showBookmarks} 
         />
         <div className="flex-1 flex flex-row overflow-hidden">
-          <div className="w-1/3 border-r border-slate-200/80 flex flex-col overflow-hidden">
+          <div className="w-1/3 flex flex-col overflow-hidden">
             <PostList 
               posts={filteredPosts} 
               selectedPost={selectedPost} 
@@ -728,7 +728,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
               error={error?.message}
             />
           </div>
-          <div className="flex-1 overflow-auto bg-white">
+          <div className="flex-1 overflow-auto bg-slate-50">
             {selectedPost ? (
               <PostDetail 
                 post={selectedPost} 

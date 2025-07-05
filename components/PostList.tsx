@@ -13,7 +13,9 @@ interface PostListProps {
 
 const PostList: React.FC<PostListProps> = ({ posts, selectedPost, onSelectPost, loading, error }) => {
   return (
-    <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex-shrink-0 bg-white border-r-[1px] border-slate-100 flex flex-col h-full">
+    <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex-shrink-0 bg-white flex flex-col h-full">
+      {/* 구분선 완전히 제거 */}
+      
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
