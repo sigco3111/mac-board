@@ -58,6 +58,7 @@ const delay = (attempts: number) => {
 export interface CategoryItem {
   id: string;
   name: string;
+  icon?: string; // 아이콘 이름 (선택적 필드)
 }
 
 /**
@@ -165,7 +166,16 @@ export const addCategory = async (category: Omit<CategoryItem, 'id'>): Promise<s
       }
       
       // 4. 새 카테고리 추가
-      const newCategory = { id: newId, name: category.name };
+      const newCategory: CategoryItem = { 
+        id: newId, 
+        name: category.name
+      };
+      
+      // 아이콘이 제공된 경우 추가
+      if (category.icon) {
+        newCategory.icon = category.icon;
+      }
+      
       const updatedCategories = [...categories, newCategory];
       
       // 현재 타임스탬프를 한 번만 생성하여 재사용
@@ -209,9 +219,14 @@ export const addCategory = async (category: Omit<CategoryItem, 'id'>): Promise<s
  * 관리자용 카테고리 수정 함수
  * @param categoryId 수정할 카테고리 ID
  * @param updatedName 새 카테고리 이름
+ * @param icon 카테고리 아이콘 (선택적)
  * @returns 수정 성공 여부
  */
-export const updateCategory = async (categoryId: string, updatedName: string): Promise<boolean> => {
+export const updateCategory = async (
+  categoryId: string, 
+  updatedName: string,
+  icon?: string
+): Promise<boolean> => {
   // 관리자 권한 검증
   verifyAdminAuth();
   
@@ -229,45 +244,58 @@ export const updateCategory = async (categoryId: string, updatedName: string): P
       // 설정 문서 참조
       const settingsRef = doc(db, SETTINGS_COLLECTION, GLOBAL_SETTINGS_ID);
       
-      // 트랜잭션으로 중복 검사 및 수정
-      return await runTransaction(db, async (transaction) => {
-        const settingsDoc = await transaction.get(settingsRef);
-        
-        if (!settingsDoc.exists()) {
-          throw new Error(NOT_FOUND_ERROR);
-        }
-        
-        const settingsData = settingsDoc.data();
-        const categories = settingsData.categories || [];
-        
-        // 대상 카테고리 검색
-        const categoryIndex = categories.findIndex((cat: CategoryItem) => cat.id === categoryId);
-        
-        if (categoryIndex === -1) {
-          throw new Error(`ID가 '${categoryId}'인 카테고리를 찾을 수 없습니다.`);
-        }
-        
-        // 중복 이름 검사 (다른 카테고리와 이름 중복 확인)
-        if (categories.some((cat: CategoryItem, index: number) => 
-            cat.name === updatedName && index !== categoryIndex)) {
-          throw new Error(`이름 '${updatedName}'은(는) 이미 사용 중입니다. 다른 카테고리 이름을 선택해주세요.`);
-        }
-        
-        // 새 카테고리 배열 생성
-        const updatedCategories = [...categories];
-        updatedCategories[categoryIndex] = { 
-          ...updatedCategories[categoryIndex], 
-          name: updatedName 
-        };
-        
-        // 업데이트 실행
-        transaction.update(settingsRef, {
-          categories: updatedCategories,
-          updatedAt: Timestamp.now()
-        });
-        
-        return true;
+      // 트랜잭션 대신 일반 업데이트로 변경하여 에러 방지
+      // 1. 먼저 설정 문서를 가져옵니다
+      const settingsSnap = await getDoc(settingsRef);
+      
+      if (!settingsSnap.exists()) {
+        throw new Error(NOT_FOUND_ERROR);
+      }
+      
+      const settingsData = settingsSnap.data();
+      const categories = settingsData.categories || [];
+      
+      // 대상 카테고리 검색
+      const categoryIndex = categories.findIndex((cat: CategoryItem) => cat.id === categoryId);
+      
+      if (categoryIndex === -1) {
+        throw new Error(`ID가 '${categoryId}'인 카테고리를 찾을 수 없습니다.`);
+      }
+      
+      // 중복 이름 검사 (다른 카테고리와 이름 중복 확인)
+      if (categories.some((cat: CategoryItem, index: number) => 
+          cat.name === updatedName && index !== categoryIndex)) {
+        throw new Error(`이름 '${updatedName}'은(는) 이미 사용 중입니다. 다른 카테고리 이름을 선택해주세요.`);
+      }
+      
+      // 새 카테고리 배열 생성
+      const updatedCategories = [...categories];
+      
+      // 기존 카테고리 객체 가져오기
+      const existingCategory = { ...updatedCategories[categoryIndex] };
+      
+      // 업데이트할 필드 설정
+      const updatedCategory: CategoryItem = { 
+        ...existingCategory,
+        name: updatedName
+      };
+      
+      // 아이콘이 제공된 경우 추가 또는 제거
+      if (icon !== undefined) {
+        updatedCategory.icon = icon || undefined;
+      }
+      
+      // 업데이트된 카테고리로 교체
+      updatedCategories[categoryIndex] = updatedCategory;
+      
+      // 업데이트 실행
+      await updateDoc(settingsRef, {
+        categories: updatedCategories,
+        updatedAt: Timestamp.now()
       });
+      
+      return true;
+      
     } catch (error) {
       console.error(`카테고리 수정 오류 (ID: ${categoryId}, 시도 ${attempts}/${MAX_RETRY_COUNT}):`, error);
       
@@ -423,7 +451,7 @@ export const reorderCategories = async (sortedCategories: CategoryItem[]): Promi
       
       // 순서 업데이트
       await updateDoc(settingsRef, {
-        categories: sortedCategories,
+        categories: sortedCategories as CategoryItem[],
         updatedAt: Timestamp.now()
       });
       

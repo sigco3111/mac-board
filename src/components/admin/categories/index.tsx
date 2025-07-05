@@ -9,6 +9,7 @@ import {
 } from '../../../services/admin/categories';
 import { Draggable, DropResult } from 'react-beautiful-dnd';
 import { DragDropWrapper } from './DragDropWrapper';
+import IconSelector, { getIconEmoji } from './IconSelector';
 
 /**
  * 카테고리 관리 컴포넌트
@@ -19,10 +20,14 @@ const CategoryManagement: React.FC = () => {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   // 새 카테고리 이름 상태
   const [newCategoryName, setNewCategoryName] = useState('');
+  // 새 카테고리 아이콘 상태
+  const [newCategoryIcon, setNewCategoryIcon] = useState('');
   // 수정 모드 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   // 수정할 이름 상태
   const [editingName, setEditingName] = useState('');
+  // 수정할 아이콘 상태
+  const [editingIcon, setEditingIcon] = useState('');
   // 로딩 상태
   const [isLoading, setIsLoading] = useState(true);
   // 에러 상태
@@ -86,9 +91,13 @@ const CategoryManagement: React.FC = () => {
       // 로딩 상태 메시지 표시
       setSuccessMessage('카테고리를 추가하는 중입니다...');
       
-      await addCategory({ name: newCategoryName.trim() });
+      await addCategory({ 
+        name: newCategoryName.trim(),
+        icon: newCategoryIcon || undefined
+      });
       await loadCategories();
       setNewCategoryName('');
+      setNewCategoryIcon('');
       showSuccessMessage('카테고리가 성공적으로 추가되었습니다.');
     } catch (err) {
       console.error('카테고리 추가 실패:', err);
@@ -115,6 +124,7 @@ const CategoryManagement: React.FC = () => {
   const startEditing = (category: CategoryItem) => {
     setEditingId(category.id);
     setEditingName(category.name);
+    setEditingIcon(category.icon || '');
   };
 
   /**
@@ -123,6 +133,7 @@ const CategoryManagement: React.FC = () => {
   const cancelEditing = () => {
     setEditingId(null);
     setEditingName('');
+    setEditingIcon('');
   };
 
   /**
@@ -138,7 +149,7 @@ const CategoryManagement: React.FC = () => {
     setError(null);
     
     try {
-      await updateCategory(categoryId, editingName.trim());
+      await updateCategory(categoryId, editingName.trim(), editingIcon || undefined);
       await loadCategories();
       cancelEditing();
       showSuccessMessage('카테고리가 성공적으로 수정되었습니다.');
@@ -256,6 +267,9 @@ const CategoryManagement: React.FC = () => {
               ID
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              아이콘
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               이름
             </th>
             <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -289,6 +303,18 @@ const CategoryManagement: React.FC = () => {
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                         시스템
                       </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {editingId === category.id ? (
+                      <IconSelector 
+                        selectedIcon={editingIcon} 
+                        onSelectIcon={(icon) => setEditingIcon(icon)}
+                      />
+                    ) : (
+                      <div className="text-xl">
+                        {category.icon ? getIconEmoji(category.icon) : ''}
+                      </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -391,12 +417,16 @@ const CategoryManagement: React.FC = () => {
       {/* 새 카테고리 추가 폼 */}
       <form onSubmit={handleAddCategory} className="mb-8">
         <div className="flex items-center">
+          <IconSelector 
+            selectedIcon={newCategoryIcon} 
+            onSelectIcon={(icon) => setNewCategoryIcon(icon)}
+          />
           <input
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
             placeholder="새 카테고리 이름"
-            className="flex-1 p-2 border border-gray-300 rounded mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 p-2 border border-gray-300 rounded mx-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isLoading}
           />
           <button
