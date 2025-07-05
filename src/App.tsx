@@ -13,6 +13,8 @@ import AdminLayout from './components/admin/AdminLayout';
 import AdminPosts from './components/admin/posts';
 // 카테고리 관리 컴포넌트 임포트
 import CategoryManagement from './components/admin/categories';
+// 백업/복원 페이지 컴포넌트 임포트
+import BackupRestorePage from './components/admin/backup/BackupRestorePage';
 import './index.css';
 
 // 로그아웃 상태를 저장하기 위한 로컬 스토리지 키
@@ -29,18 +31,7 @@ const AdminDashboard: React.FC = () => (
   </AdminLayout>
 );
 
-// AdminTags 컴포넌트 제거
-
-/**
- * 어드민 데이터 백업/복원 페이지 컴포넌트
- * 실제 구현은 별도 파일로 분리할 예정입니다.
- */
-const AdminBackup: React.FC = () => (
-  <AdminLayout title="데이터 백업/복원">
-    <h2 className="text-xl font-semibold mb-4">데이터 백업/복원</h2>
-    <p>데이터 백업/복원 내용이 여기에 표시됩니다.</p>
-  </AdminLayout>
-);
+// 임시 AdminBackup 컴포넌트 제거
 
 /**
  * 애플리케이션 루트 컴포넌트
@@ -152,8 +143,8 @@ const App: React.FC = () => {
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/posts/*" element={<AdminLayout title="게시물 관리"><AdminPosts /></AdminLayout>} />
       <Route path="/admin/categories" element={<AdminLayout title="카테고리 관리"><CategoryManagement /></AdminLayout>} />
-      {/* 태그 관리 라우트 제거 */}
-      <Route path="/admin/backup" element={<AdminBackup />} />
+      {/* 백업/복원 페이지 라우트 */}
+      <Route path="/admin/backup" element={<BackupRestorePage />} />
       
       {/* 메인 앱 라우트 */}
       <Route path="/" element={
