@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchPosts, fetchPostsByCategory, fetchPostsByTag, UIPost, fetchCategoriesFromFirestore } from '../services/firebase/firestore';
 import { Category } from '../types';
 import { FolderIcon, MessagesSquareIcon, TagIcon } from '../../components/icons';
+import { getIconEmoji } from '../utils/icons';
 
 /**
  * 게시물 목록을 관리하는 커스텀 훅
@@ -44,7 +45,7 @@ export const usePosts = (options?: { category?: string; tag?: string }) => {
               id: cat.id,
               name: cat.name,
               icon: cat.icon ? (
-                <span className="text-lg">{cat.icon}</span>
+                <span className="text-lg">{getIconEmoji(cat.icon)}</span>
               ) : (
                 cat.id === 'tech' ? <FolderIcon /> : 
                 cat.id === 'general' ? <TagIcon /> : <FolderIcon />

@@ -9,7 +9,8 @@ import {
 } from '../../../services/admin/categories';
 import { Draggable, DropResult } from 'react-beautiful-dnd';
 import { DragDropWrapper } from './DragDropWrapper';
-import IconSelector, { getIconEmoji } from './IconSelector';
+import IconSelector from './IconSelector';
+import { getIconEmoji } from '../../../utils/icons';
 
 /**
  * 카테고리 관리 컴포넌트
