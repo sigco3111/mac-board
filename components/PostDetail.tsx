@@ -12,17 +12,32 @@ interface PostDetailProps {
   onSelectTag: (tag: string | null) => void;
   onEditPost?: () => void;
   onDeletePost?: () => void;
+  // 추가 props
+  isPostOwner?: boolean;
+  onRefresh?: () => void;
+  userId?: string;
+  categories?: any[];
 }
 
-const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag, onEditPost, onDeletePost }) => {
+const PostDetail: React.FC<PostDetailProps> = ({ 
+  post, 
+  onSelectTag, 
+  onEditPost, 
+  onDeletePost, 
+  isPostOwner = false, 
+  onRefresh,
+  userId,
+  categories = []
+}) => {
   // 인증 정보 가져오기
   const { user } = useAuth();
   
   // 기본 프로필 이미지
   const defaultAvatar = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNjY2MiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCI+PC9jaXJjbGU+PC9zdmc+`;
 
-  // 현재 사용자가 게시물 작성자인지 확인
-  const isAuthor = user && post && user.uid === post.authorId;
+  // 사용자 권한 확인: 외부에서 전달받은 값(isPostOwner)과 컴포넌트 내부에서 계산한 값 모두 사용
+  const isCurrentUserAuthor = user && post && user.uid === post.authorId;
+  const canEditDelete = isPostOwner || isCurrentUserAuthor;
 
   if (!post) {
     return (
@@ -57,7 +72,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onSelectTag, onEditPost, 
             )}
             
             {/* 작성자에게만 보이는 수정/삭제 버튼 */}
-            {isAuthor && onEditPost && onDeletePost && (
+            {canEditDelete && onEditPost && onDeletePost && (
               <div className="flex space-x-2">
                 <button 
                   onClick={onEditPost}

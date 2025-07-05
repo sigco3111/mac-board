@@ -562,7 +562,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
 
   // 게시물 소유자 확인 함수
   const isPostOwner = useCallback((post: UIPost | null) => {
-    return post?.userId === user?.uid;
+    return post?.authorId === user?.uid;
   }, [user?.uid]);
 
   // 메뉴 생성 및 업데이트
@@ -675,9 +675,9 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
             {selectedPost ? (
               <PostDetail 
                 post={selectedPost} 
-                onEdit={handleOpenEditModal} 
-                onDelete={requestDeletePost}
-                onMove={handleMovePost}
+                onEditPost={handleOpenEditModal} 
+                onDeletePost={requestDeletePost}
+                onSelectTag={handleSelectTag}
                 categories={categories.filter(cat => cat.id !== 'all')} // 'all' 카테고리는 제외
                 isPostOwner={isPostOwner(selectedPost)}
                 onRefresh={refreshPostData}
