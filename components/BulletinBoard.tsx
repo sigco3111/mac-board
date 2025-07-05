@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import type { UIPost, Category, Menu, MenuItem, User } from '../src/types';
+import type { Post, UIPost, Category, Menu, MenuItem, User } from '../src/types';
 import Sidebar from './Sidebar';
 import PostList from './PostList';
 import PostDetail from './PostDetail';
@@ -12,6 +12,7 @@ import { FolderIcon, MessagesSquareIcon, TagIcon } from './icons';
 import { usePosts } from '../src/hooks/usePosts';
 import { useBookmarks } from '../src/hooks/useBookmarks';
 import { deletePost, updatePost, createPost, movePost, fetchCategoriesFromFirestore } from '../src/services/firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 
 // 기본 카테고리 데이터 (Firestore 로드 전에 임시로 사용)
 const defaultCategories: Category[] = [
@@ -547,13 +548,32 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     setIsModalOpen(true);
   }, []);
 
-  const handleSavePost = useCallback(async (post: UIPost) => {
+  const handleSavePost = useCallback(async (postData: { title: string; category: string; content: string; tags: string[] }) => {
     try {
       if (postToEdit) {
-        await updatePost(postToEdit.id, post);
+        await updatePost(postToEdit.id, {
+          ...postToEdit,
+          ...postData,
+          updatedAt: Timestamp.now(), // Firestore Timestamp로 수정
+        }, user?.uid);
         showToast('게시물이 수정되었습니다.', 'success');
       } else {
-        await createPost(post);
+        if (!user) {
+          showToast('로그인이 필요합니다.', 'error');
+          return;
+        }
+        const newPost: Partial<Post> = {
+          ...postData,
+          author: {
+            name: user.displayName || 'Anonymous',
+          },
+          authorId: user.uid,
+          createdAt: Timestamp.now(), // Firestore Timestamp로 수정
+          updatedAt: Timestamp.now(), // Firestore Timestamp로 수정
+          commentCount: 0,
+          viewCount: 0,
+        };
+        await createPost(newPost);
         showToast('게시물이 작성되었습니다.', 'success');
       }
       setIsModalOpen(false);
@@ -563,7 +583,7 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       showToast('게시물 저장 중 오류가 발생했습니다.', 'error');
       console.error("게시물 저장 중 오류:", error);
     }
-  }, [postToEdit, refreshPosts, refreshBookmarks, showToast]);
+  }, [postToEdit, refreshPosts, refreshBookmarks, showToast, user]);
 
   // 게시물 삭제 관련 함수
   const requestDeletePost = useCallback(() => {
