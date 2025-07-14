@@ -93,11 +93,11 @@ const PostDetail: React.FC<PostDetailProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center space-x-3 mt-3 text-sm">
+        <div className="flex items-center space-x-4 mt-3 text-sm">
           <img 
             src={avatarUrl} 
             alt={post.author.name} 
-            className="w-10 h-10 rounded-full"
+            className="w-10 h-10 rounded-full object-cover aspect-square flex-shrink-0"
             onError={(e) => {
               // 이미지 로드 실패 시 기본 이미지로 대체
               (e.target as HTMLImageElement).src = defaultAvatar;

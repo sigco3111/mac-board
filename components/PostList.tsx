@@ -34,7 +34,7 @@ const PostList: React.FC<PostListProps> = ({
   };
 
   return (
-    <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex-shrink-0 bg-white flex flex-col h-full">
+    <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg min-w-[300px] flex-shrink-0 bg-white flex flex-col h-full">
       {/* 검색창 추가 */}
       <div className="p-3 border-b border-slate-200">
         <div className="relative flex items-center">
@@ -64,7 +64,7 @@ const PostList: React.FC<PostListProps> = ({
               <PostItem
                 key={post.id}
                 post={post}
-                isSelected={selectedPost && post.id === selectedPost.id}
+                isSelected={!!(selectedPost && post.id === selectedPost.id)}
                 onClick={() => onSelectPost(post)}
               />
             ))

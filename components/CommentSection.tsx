@@ -176,11 +176,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                   </form>
                 ) : (
                   <>
-                    <div className="flex items-start space-x-3">
+                    <div className="flex items-start space-x-4">
                       <img 
                         src={comment.author.photoURL || defaultAvatar} 
                         alt={comment.author.name} 
-                        className="w-8 h-8 rounded-full"
+                        className="w-8 h-8 rounded-full object-cover aspect-square flex-shrink-0"
                         onError={(e) => {
                           // 이미지 로드 실패 시 기본 이미지로 대체
                           (e.target as HTMLImageElement).src = defaultAvatar;
@@ -190,9 +190,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                         <div className="flex justify-between items-center">
                           <div>
                             <span className="font-semibold text-slate-800">{comment.author.name}</span>
-                            <span className="text-xs text-slate-500 ml-2">
-                              {new Date(comment.date).toLocaleString()}
-                            </span>
+                            <span className="text-slate-500 text-xs ml-2">{new Date(comment.date).toLocaleString()}</span>
                           </div>
                           
                           {/* 작성자에게만 보이는 수정/삭제 버튼 */}
@@ -229,11 +227,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
       {/* 댓글 작성 폼 - 게스트는 댓글 작성 폼 대신 안내 메시지 표시 */}
       {user && !user.isAnonymous ? (
         <form onSubmit={handleSubmitComment} className="p-4 bg-slate-50">
-          <div className="flex items-start space-x-3">
+          <div className="flex items-start space-x-4">
             <img 
               src={userAvatar} 
               alt={user.displayName || '사용자'} 
-              className="w-8 h-8 rounded-full"
+              className="w-8 h-8 rounded-full object-cover aspect-square flex-shrink-0"
               onError={(e) => {
                 // 이미지 로드 실패 시 기본 이미지로 대체
                 (e.target as HTMLImageElement).src = defaultAvatar;
@@ -251,10 +249,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
               <div className="mt-2 flex justify-end">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                   disabled={!newComment.trim() || submitting}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? '작성 중...' : '댓글 작성'}
+                  {submitting ? '댓글 작성 중...' : '댓글 작성'}
                 </button>
               </div>
             </div>

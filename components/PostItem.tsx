@@ -60,13 +60,13 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
         isSelected ? 'bg-blue-100/70' : 'hover:bg-slate-50'
       }`}
     >
-      <div className="grid grid-cols-10 gap-2 w-full items-center">
+      <div className="grid grid-cols-10 gap-3 w-full items-center">
         {/* 프로필 이미지 (1/10) */}
-        <div className="col-span-1">
+        <div className="col-span-1 flex justify-center items-center min-w-[32px]">
           <img 
             src={avatarUrl} 
             alt={post.author.name} 
-            className="w-7 h-7 rounded-full"
+            className="w-7 h-7 rounded-full object-cover aspect-square flex-shrink-0"
             onError={(e) => {
               (e.target as HTMLImageElement).src = defaultAvatar;
             }}
@@ -74,12 +74,12 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
         </div>
         
         {/* 제목 및 작성자 (6/10) */}
-        <div className="col-span-6 min-w-0 overflow-hidden pr-1">
+        <div className="col-span-6 min-w-0 overflow-hidden pr-1 pl-1">
           <div className="flex items-center">
             <p className={`font-medium text-xs ${isSelected ? 'text-blue-800' : 'text-slate-600'} truncate mr-2`}>{post.author.name}</p>
             {post.isNew && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>}
           </div>
-          <h3 className={`font-bold text-sm truncate ${isSelected ? 'text-slate-900' : 'text-slate-900'}`}>{post.title}</h3>
+          <p className={`text-xs ${isSelected ? 'text-blue-700' : 'text-slate-700'} truncate font-medium`}>{post.title}</p>
         </div>
         
         {/* 댓글수, 날짜, 북마크 (3/10) */}
