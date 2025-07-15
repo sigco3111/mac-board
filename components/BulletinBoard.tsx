@@ -77,71 +77,36 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     setToast(prev => ({ ...prev, visible: false }));
   }, []);
 
-  // Selection API 관련 에러 처리를 위한 함수
-  const clearSelection = useCallback(() => {
-    try {
-      // 현재 활성화된 요소에서 포커스 제거
-      if (document.activeElement && document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-
-      // 텍스트 선택 초기화 - 다양한 브라우저 지원
-      const selection = window.getSelection();
-      if (selection) {
-        if (typeof selection.empty === 'function') {
-          // Chrome, Safari
-          selection.empty();
-        } else if (typeof selection.removeAllRanges === 'function') {
-          // Firefox
-          selection.removeAllRanges();
-        }
-        // IE 지원 코드 제거 (더 이상 필요하지 않음)
-      }
-      
-      // 현재 활성 요소가 있다면 블러 처리
-      document.activeElement instanceof HTMLElement && document.activeElement.blur();
-      
-    } catch (error) {
-      // 에러가 발생해도 앱 실행에 영향을 주지 않도록 함
-      console.error("Selection API 에러 처리 중 오류:", error);
-    }
-  }, []);
+  // 텍스트 선택 허용을 위해 clearSelection 함수 제거
+  // (이전에는 텍스트 선택을 막기 위해 사용했으나, 이제는 텍스트 선택을 허용함)
   
-  // 컴포넌트 마운트/언마운트 시 Selection API 관리 강화
+  // 컴포넌트 마운트/언마운트 시 텍스트 선택 허용으로 변경
   useEffect(() => {
-    // 컴포넌트 마운트 시 Selection API 초기화 강화
-    const disableSelection = () => {
-      try {
-        // document selection 비활성화
-        document.onselectstart = () => false;
-        
-        // 표준 CSS 속성 사용
-        document.body.style.userSelect = 'none';
-        
-        clearSelection();
-      } catch (error) {
-        console.error("Selection 비활성화 중 오류:", error);
-      }
-    };
-    
+    // 텍스트 선택을 허용하도록 설정
     const enableSelection = () => {
       try {
-        // document selection 활성화 복원
+        // document selection 활성화
         document.onselectstart = null;
         
-        // 표준 CSS 속성 사용
-        document.body.style.userSelect = '';
+        // 표준 CSS 속성 사용하여 텍스트 선택 허용
+        document.body.style.userSelect = 'auto';
       } catch (error) {
         console.error("Selection 활성화 중 오류:", error);
       }
     };
     
-    // 마운트 시 실행
-    disableSelection();
+    // 마운트 시 텍스트 선택 활성화 실행
+    enableSelection();
     
-    // 언마운트 시 원상복구
-    return enableSelection;
-  }, [clearSelection]);
+    // 언마운트 시에도 텍스트 선택 유지
+    return () => {
+      try {
+        document.body.style.userSelect = 'auto';
+      } catch (error) {
+        console.error("Selection 정리 중 오류:", error);
+      }
+    };
+  }, []);
 
   // 북마크 관련 기능 가져오기
   const { 
@@ -231,24 +196,16 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   // 초기 북마크 설정
   useEffect(() => {
     if (initialShowBookmarks) {
-      // 선택 초기화
-      clearSelection();
+      // 카테고리와 태그 초기화
+      setSelectedCategory('all');
+      setSelectedTag(null);
       
-      // 안전한 상태 전환을 위해 단계적으로 처리
-      setTimeout(() => {
-        // 먼저 카테고리와 태그 초기화
-        setSelectedCategory('all');
-        setSelectedTag(null);
-        
-        // 약간의 지연 후 북마크 모드 활성화
-        setTimeout(() => {
-          setShowBookmarks(true);
-          // 북마크 데이터 새로고침 (최신 상태 유지)
-          refreshBookmarks();
-        }, 50);
-      }, 10);
+      // 북마크 모드 활성화
+      setShowBookmarks(true);
+      // 북마크 데이터 새로고침 (최신 상태 유지)
+      refreshBookmarks();
     }
-  }, [initialShowBookmarks, refreshBookmarks, clearSelection]);
+  }, [initialShowBookmarks, refreshBookmarks]);
   
   // 컴포넌트 재랜더링 시에도 북마크 설정이 유지되도록 추가
   useEffect(() => {
@@ -261,21 +218,8 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
     }
   }, [initialShowBookmarks, refreshBookmarks]);
 
-  // Selection API 에러 방지를 위한 전역 이벤트 리스너 설정
-  useEffect(() => {
-    // mousedown 이벤트 발생 시 Selection 초기화
-    const handleMouseDown = () => {
-      clearSelection();
-    };
-
-    // 전체 문서에 이벤트 리스너 등록
-    document.addEventListener('mousedown', handleMouseDown);
-
-    // 컴포넌트 언마운트 시 이벤트 리스너 제거
-    return () => {
-      document.removeEventListener('mousedown', handleMouseDown);
-    };
-  }, [clearSelection]);
+  // 텍스트 선택 허용을 위해 전역 마우스 이벤트 리스너 제거
+  // (이전에는 텍스트 선택을 막기 위해 사용했으나, 이제는 텍스트 선택을 허용함)
 
   // 북마크된 게시물에서 사용된 카테고리 추출
   const bookmarkedCategories = useMemo(() => {
@@ -460,51 +404,39 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
   const handleSelectCategory = useCallback((categoryId: string) => {
     console.log('카테고리 선택:', categoryId);
     
-    // 선택 초기화
-    clearSelection();
+    setSelectedCategory(categoryId);
+    setSelectedTag(null); // 태그 선택 초기화
+    setSelectedPost(null); // 선택된 게시물 초기화
     
-    // 현재 북마크 모드 유지하면서 카테고리 변경
-    setTimeout(() => {
-      setSelectedCategory(categoryId);
-      setSelectedTag(null); // 태그 선택 초기화
-      setSelectedPost(null); // 선택된 게시물 초기화
-      
-      // 북마크 모드일 때 북마크 데이터 새로고침
-      if (showBookmarks) {
-        refreshBookmarks();
-      } else {
-        // 일반 모드일 때 해당 카테고리 게시물 로드
-        refreshPosts();
-      }
-    }, 20);
-  }, [showBookmarks, clearSelection, refreshBookmarks, refreshPosts]);
+    // 북마크 모드일 때 북마크 데이터 새로고침
+    if (showBookmarks) {
+      refreshBookmarks();
+    } else {
+      // 일반 모드일 때 해당 카테고리 게시물 로드
+      refreshPosts();
+    }
+  }, [showBookmarks, refreshBookmarks, refreshPosts]);
 
   // 태그 선택 처리
   const handleSelectTag = useCallback((tag: string | null) => {
     console.log('태그 선택:', tag);
     
-    // 선택 초기화
-    clearSelection();
+    setSelectedTag(tag); // 태그 선택 또는 해제
+    setSelectedPost(null); // 선택된 게시물 초기화
     
-    // 북마크 모드 유지하면서 태그 변경
-    setTimeout(() => {
-      setSelectedTag(tag); // 태그 선택 또는 해제
-      setSelectedPost(null); // 선택된 게시물 초기화
-      
-      // 태그만 필터링할 때는 전체 카테고리로 설정
-      if (tag) {
-        setSelectedCategory('all');
-      }
-      
-      // 북마크 모드일 때 북마크 데이터 새로고침
-      if (showBookmarks) {
-        refreshBookmarks();
-      } else {
-        // 일반 모드일 때 해당 태그 게시물 로드
-        refreshPosts();
-      }
-    }, 20);
-  }, [showBookmarks, clearSelection, refreshBookmarks, refreshPosts]);
+    // 태그만 필터링할 때는 전체 카테고리로 설정
+    if (tag) {
+      setSelectedCategory('all');
+    }
+    
+    // 북마크 모드일 때 북마크 데이터 새로고침
+    if (showBookmarks) {
+      refreshBookmarks();
+    } else {
+      // 일반 모드일 때 해당 태그 게시물 로드
+      refreshPosts();
+    }
+  }, [showBookmarks, refreshBookmarks, refreshPosts]);
 
   // 게시물 작성 및 수정 관련 함수
   const handleOpenNewPost = useCallback(() => {
@@ -731,25 +663,20 @@ const BulletinBoard: React.FC<BulletinBoardProps> = ({ onClose, user, initialSho
       return;
     }
 
-    // 선택 초기화
-    clearSelection();
+    // 카테고리와 태그 초기화
+    setSelectedCategory('all');
+    setSelectedTag(null);
     
-    setTimeout(() => {
-      // 카테고리와 태그 초기화
-      setSelectedCategory('all');
-      setSelectedTag(null);
-      
-      // 북마크 모드 전환
-      setShowBookmarks(prev => !prev);
-      
-      // 북마크 데이터 새로고침
-      if (!showBookmarks) {
-        refreshBookmarks();
-      } else {
-        refreshPosts();
-      }
-    }, 10);
-  }, [user?.isAnonymous, showBookmarks, clearSelection, refreshBookmarks, refreshPosts, showToast]);
+    // 북마크 모드 전환
+    setShowBookmarks(prev => !prev);
+    
+    // 북마크 데이터 새로고침
+    if (!showBookmarks) {
+      refreshBookmarks();
+    } else {
+      refreshPosts();
+    }
+  }, [user?.isAnonymous, showBookmarks, refreshBookmarks, refreshPosts, showToast]);
   
   // 메뉴 생성 및 업데이트
   useEffect(() => {

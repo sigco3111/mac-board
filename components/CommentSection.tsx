@@ -189,8 +189,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                       <div className="flex-grow">
                         <div className="flex justify-between items-center">
                           <div>
-                            <span className="font-semibold text-slate-800">{comment.author.name}</span>
-                            <span className="text-slate-500 text-xs ml-2">{new Date(comment.date).toLocaleString()}</span>
+                            <span className="font-semibold text-slate-800 text-selectable">{comment.author.name}</span>
+                            <span className="text-slate-500 text-xs ml-2 text-selectable">{new Date(comment.date).toLocaleString()}</span>
                           </div>
                           
                           {/* 작성자에게만 보이는 수정/삭제 버튼 */}
@@ -213,7 +213,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                             </div>
                           )}
                         </div>
-                        <p className="mt-1 text-slate-700 whitespace-pre-wrap">{comment.content}</p>
+                        <p className="mt-1 text-slate-700 whitespace-pre-wrap comment-content text-selectable">{comment.content}</p>
                       </div>
                     </div>
                   </>

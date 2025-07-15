@@ -184,4 +184,66 @@
     box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
     --tw-ring-color: var(--mac-blue-color);
   }
+
+  /* 텍스트 선택 허용 관련 유틸리티 클래스 */
+  .text-selectable {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+  
+  .text-selectable-auto {
+    user-select: auto !important;
+    -webkit-user-select: auto !important;
+    -moz-user-select: auto !important;
+    -ms-user-select: auto !important;
+  }
+  
+  /* 게시물과 댓글 텍스트 영역에 대한 텍스트 선택 허용 */
+  .post-content, .comment-content {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+  
+  /* 마크다운 콘텐츠 내 텍스트 선택 허용 */
+  .prose * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+  
+  /* 전역 텍스트 선택 허용 (우선순위 최고) */
+  .text-selectable, 
+  .post-content,
+  .comment-content,
+  .prose,
+  .prose *,
+  p, span, div, h1, h2, h3, h4, h5, h6 {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+  
+  /* body 전체에서 텍스트 선택 허용 */
+  body, body * {
+    user-select: auto !important;
+    -webkit-user-select: auto !important;
+    -moz-user-select: auto !important;
+    -ms-user-select: auto !important;
+  }
+  
+  /* 특정 요소들만 선택 비활성화 (버튼, 아이콘 등) */
+  button, 
+  .cursor-pointer:not(.text-selectable),
+  .select-none {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+  }
 } 

@@ -76,10 +76,10 @@ const PostItem: React.FC<PostItemProps> = ({ post, isSelected, onClick }) => {
         {/* 제목 및 작성자 (6/10) */}
         <div className="col-span-6 min-w-0 overflow-hidden pr-1 pl-1">
           <div className="flex items-center">
-            <p className={`font-medium text-xs ${isSelected ? 'text-blue-800' : 'text-slate-600'} truncate mr-2`}>{post.author.name}</p>
+            <p className={`font-medium text-xs ${isSelected ? 'text-blue-800' : 'text-slate-600'} truncate mr-2 text-selectable`}>{post.author.name}</p>
             {post.isNew && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>}
           </div>
-          <p className={`text-xs ${isSelected ? 'text-blue-700' : 'text-slate-700'} truncate font-medium`}>{post.title}</p>
+          <p className={`text-xs ${isSelected ? 'text-blue-700' : 'text-slate-700'} truncate font-medium text-selectable`}>{post.title}</p>
         </div>
         
         {/* 댓글수, 날짜, 북마크 (3/10) */}

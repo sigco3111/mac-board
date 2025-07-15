@@ -134,8 +134,8 @@ const NewPostModal: React.FC<NewPostModalProps> = ({ categories, onClose, onSave
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 transform transition-all" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 transform transition-all">
         <div className="p-6 border-b border-slate-200">
           <h2 className="text-xl font-semibold text-slate-800">{isEditing ? '게시물 수정' : '새 게시물 작성'}</h2>
         </div>

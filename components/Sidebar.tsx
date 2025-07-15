@@ -29,71 +29,26 @@ const Sidebar: React.FC<SidebarProps> = ({
   // 인증 정보 가져오기
   const { user } = useAuth();
   
-  // Selection API 관련 에러 처리를 위한 함수
-  const clearSelection = useCallback(() => {
-    try {
-      // 현재 활성화된 요소에서 포커스 제거
-      if (document.activeElement && document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-
-      // 텍스트 선택 초기화
-      if (window.getSelection) {
-        if (window.getSelection()?.empty) {
-          window.getSelection()?.empty();
-        } else if (window.getSelection()?.removeAllRanges) {
-          window.getSelection()?.removeAllRanges();
-        }
-      }
-    } catch (error) {
-      console.error("Selection API 에러 처리 중 오류:", error);
-    }
-  }, []);
+  // 텍스트 선택 허용을 위해 clearSelection 함수 제거
+  // (이전에는 텍스트 선택을 막기 위해 사용했으나, 이제는 텍스트 선택을 허용함)
   
-  // 컴포넌트 마운트/언마운트 시 Selection API 관리
-  useEffect(() => {
-    return () => {
-      clearSelection();
-    };
-  }, [clearSelection]);
-  
-  // 북마크 토글 핸들러는 더 이상 필요하지 않으므로 제거
-  
-  // 카테고리 선택 핸들러 (에러 방지를 위한 처리 추가)
+  // 카테고리 선택 핸들러 (텍스트 선택 허용)
   const handleSelectCategory = useCallback((e: React.MouseEvent, categoryId: string) => {
     e.preventDefault();
-    // 선택 초기화
-    clearSelection();
-    
-    // Selection 에러 방지를 위한 비동기 처리
-    setTimeout(() => {
-      onSelectCategory(categoryId);
-    }, 10);
-  }, [onSelectCategory, clearSelection]);
+    onSelectCategory(categoryId);
+  }, [onSelectCategory]);
   
-  // 태그 선택 핸들러 (에러 방지를 위한 처리 추가)
+  // 태그 선택 핸들러 (텍스트 선택 허용)
   const handleSelectTag = useCallback((e: React.MouseEvent, tag: string) => {
     e.preventDefault();
-    // 선택 초기화
-    clearSelection();
-    
-    // Selection 에러 방지를 위한 비동기 처리
-    setTimeout(() => {
-      onSelectTag(tag);
-    }, 10);
-  }, [onSelectTag, clearSelection]);
+    onSelectTag(tag);
+  }, [onSelectTag]);
 
   // 새 게시물 작성 핸들러
   const handleNewPost = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    // 선택 초기화
-    clearSelection();
-    
-    // Selection 에러 방지를 위한 비동기 처리
-    setTimeout(() => {
-      onNewPost();
-    }, 10);
-  }, [onNewPost, clearSelection]);
+    onNewPost();
+  }, [onNewPost]);
 
   // categories와 allTags의 안전한 처리를 위한 확인
   const safeCategories = Array.isArray(categories) ? categories : [];

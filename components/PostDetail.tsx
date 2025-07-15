@@ -60,7 +60,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
       <div className="p-6 border-b border-slate-200">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{post.title}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 text-selectable">{post.title}</h1>
           </div>
           
           <div className="flex items-center">
@@ -104,14 +104,14 @@ const PostDetail: React.FC<PostDetailProps> = ({
             }}
           />
           <div>
-            <p className="font-semibold text-slate-800">{post.author.name}</p>
-            <p className="text-slate-500">{new Date(post.date).toLocaleString()}</p>
+            <p className="font-semibold text-slate-800 text-selectable">{post.author.name}</p>
+            <p className="text-slate-500 text-selectable">{new Date(post.date).toLocaleString()}</p>
           </div>
         </div>
       </div>
       <div className="overflow-y-auto flex-grow">
         <div className="p-6">
-          <div className="prose prose-slate prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-800 prose-pre:text-slate-100 max-w-none">
+          <div className="prose prose-slate prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-800 prose-pre:text-slate-100 max-w-none post-content text-selectable">
             <ReactMarkdown 
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSanitize]}
@@ -152,7 +152,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
                   className="flex items-center space-x-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
                 >
                   <HashtagIcon className="w-3 h-3" />
-                  <span>{tag}</span>
+                  <span className="text-selectable">{tag}</span>
                 </button>
               ))}
             </div>
