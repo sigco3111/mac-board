@@ -59,7 +59,8 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
     { 
       name: '테마', 
       items: [
-        { label: 'Win11', action: () => window.open('https://win11-board.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false }
+        { label: 'Win11', action: () => window.open('https://win11-board.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: 'Ubuntu', action: () => window.open('https://ubuntu-board.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false }
       ] 
     },
     { 
