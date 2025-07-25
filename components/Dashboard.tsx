@@ -20,7 +20,8 @@ import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { 
   fetchPosts, 
   fetchUpdatedPostsByDateRange,
-  fetchPostsByDateRange
+  fetchPostsByDateRange,
+  fetchCategoriesFromFirestore
 } from '../src/services/firebase/firestore';
 import { UIPost } from '../src/types';
 
@@ -48,7 +49,7 @@ interface DashboardProps {
 /**
  * 날짜 범위 옵션 정의
  */
-type DateRangeOption = '7days' | '30days' | '90days' | 'custom';
+type DateRangeOption = '7days' | '30days' | '90days' | 'custom' | 'all';
 
 /**
  * 대시보드 컴포넌트
@@ -65,6 +66,9 @@ const Dashboard: React.FC<DashboardProps> = () => {
   const [customEndDate, setCustomEndDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+
+  // 카테고리 ID와 이름 매핑 상태 추가
+  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
 
   const [stats, setStats] = useState({
     totalPosts: 0,
@@ -106,6 +110,12 @@ const Dashboard: React.FC<DashboardProps> = () => {
         const timeDiff = endDate.getTime() - startDate.getTime();
         days = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1; // 종료일 포함
         break;
+      case 'all':
+        // 전체 기간인 경우 2000년 1월 1일부터 현재까지로 설정
+        startDate = new Date(2000, 0, 1);
+        const allDaysTimeDiff = endDate.getTime() - startDate.getTime();
+        days = Math.floor(allDaysTimeDiff / (1000 * 60 * 60 * 24)) + 1;
+        break;
       default:
         startDate = new Date();
         startDate.setDate(endDate.getDate() - 6);
@@ -122,10 +132,30 @@ const Dashboard: React.FC<DashboardProps> = () => {
     return { startDate, endDate: actualEndDate, days };
   };
 
+  // 카테고리 정보 로드
+  const loadCategories = async () => {
+    try {
+      const categories = await fetchCategoriesFromFirestore();
+      const categoryMapping: Record<string, string> = {};
+      
+      categories.forEach(category => {
+        categoryMapping[category.id] = category.name;
+      });
+      
+      setCategoryMap(categoryMapping);
+    } catch (err) {
+      console.error('카테고리 정보 로드 오류:', err);
+      // 오류가 발생해도 기본 로직을 중단하지 않음
+    }
+  };
+
   // 데이터 로드
   const loadData = async () => {
     try {
       setIsLoading(true);
+      
+      // 카테고리 정보 로드
+      await loadCategories();
       
       // 날짜 범위 계산
       const { startDate, endDate, days } = getDateRange();
@@ -266,8 +296,14 @@ const Dashboard: React.FC<DashboardProps> = () => {
   
   // 카테고리 분포 데이터 생성
   const getCategoryDistributionData = () => {
-    const labels = Object.keys(stats.categoryDistribution);
-    const data = labels.map(category => stats.categoryDistribution[category]);
+    // 카테고리 ID를 이름으로 변환하여 레이블 생성
+    const categoryEntries = Object.entries(stats.categoryDistribution);
+    const categoryLabels = categoryEntries.map(([id]) => {
+      // 카테고리 이름으로 변환, 매핑이 없으면 ID 또는 미분류 사용
+      return categoryMap[id] || (id === 'undefined' ? '미분류' : id);
+    });
+    
+    const data = categoryEntries.map(([_, count]) => count);
     
     // 색상 배열
     const backgroundColors = [
@@ -281,10 +317,10 @@ const Dashboard: React.FC<DashboardProps> = () => {
     ];
     
     // 카테고리가 색상보다 많으면 색상 반복
-    const colors = labels.map((_, i) => backgroundColors[i % backgroundColors.length]);
+    const colors = categoryLabels.map((_, i) => backgroundColors[i % backgroundColors.length]);
     
     return {
-      labels,
+      labels: categoryLabels,
       datasets: [
         {
           data,
@@ -352,6 +388,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
             <option value="30days">최근 30일</option>
             <option value="90days">최근 90일</option>
             <option value="custom">사용자 지정</option>
+            <option value="all">전체 기간</option>
           </select>
           
           {dateRange === 'custom' && (
@@ -473,7 +510,9 @@ const Dashboard: React.FC<DashboardProps> = () => {
         <div style={{ height: '120px' }}>
           <Bar 
             data={{
-              labels: Object.keys(stats.categoryDistribution),
+              labels: Object.entries(stats.categoryDistribution).map(([id]) => 
+                categoryMap[id] || (id === 'undefined' ? '미분류' : id)
+              ),
               datasets: [{
                 label: '게시물 수',
                 data: Object.values(stats.categoryDistribution),

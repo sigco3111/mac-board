@@ -4,11 +4,12 @@
  */
 import React, { useState, useEffect } from 'react';
 import MenuBar from './MenuBar';
-import { FolderIcon, SettingsIcon } from './icons';
+import { FolderIcon, SettingsIcon, DashboardIcon } from './icons';
 import HelpModal from './HelpModal';
 import BulletinBoard from './BulletinBoard';
 import { User } from '../src/types';
 import SettingsModal from './SettingsModal';
+import AdvancedDashboard from './AdvancedDashboard';
 
 // 로그아웃 상태를 저장하기 위한 로컬 스토리지 키
 const LOGOUT_FLAG_KEY = 'mac_board_force_logout';
@@ -41,6 +42,7 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [isAdvancedDashboardOpen, setAdvancedDashboardOpen] = useState(false);
   const [boardState, setBoardState] = useState<BoardState>('closed');
   const [wallpaper, setWallpaper] = useState<string>(() => {
     const type = localStorage.getItem(WALLPAPER_TYPE_KEY);
@@ -64,6 +66,7 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
   const desktopItems = [
     { id: 'bulletin-board', name: '게시판', Icon: FolderIcon, onOpen: () => setBoardState('board'), color: 'text-sky-400' },
     { id: 'bookmark', name: '북마크', Icon: FolderIcon, onOpen: () => setBoardState('bookmarks'), color: 'text-sky-400' },
+    { id: 'dashboard', name: '대시보드', Icon: DashboardIcon, onOpen: () => setAdvancedDashboardOpen(true), color: 'text-indigo-400' },
     { id: 'settings', name: '설정', Icon: SettingsIcon, onOpen: () => setSettingsModalOpen(true), color: 'text-gray-500' },
   ];
 
@@ -158,6 +161,10 @@ const Desktop: React.FC<DesktopProps> = ({ user, onOpenBoard, onLogout }) => {
           initialShowBookmarks={boardState === 'bookmarks'}
         />
       )}
+      <AdvancedDashboard 
+        isOpen={isAdvancedDashboardOpen} 
+        onClose={() => setAdvancedDashboardOpen(false)} 
+      />
     </div>
   );
 };
