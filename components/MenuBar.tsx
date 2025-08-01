@@ -53,7 +53,25 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
       name: '이동', 
       items: [
         { label: 'AI 테크 허브', action: () => window.open('https://tech-toolkit-hub.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
-        { label: '데브캔버스', action: () => window.open('https://dev-canvas-pi.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false }
+        { label: '데브캔버스', action: () => window.open('https://dev-canvas-pi.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },        
+        { label: '스팀 대시보드', action: () => window.open('https://steam-board.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '데이터 지도', action: () => window.open('https://world-data-map.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '실시간 원자재', action: () => window.open('https://commodity-dashboard-bay.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },        
+        { label: '세계은행 데이터', action: () => window.open('https://world-bank-board.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },        
+        { label: '지진 추적기', action: () => window.open('https://earthquake-seven.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '지형 프로필 분석기', action: () => window.open('https://terrain-one.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },        
+        { label: '위성 궤도', action: () => window.open('https://satellite-board.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false }
+      ] 
+    },
+    { 
+      name: '도구', 
+      items: [
+        { label: 'GitHub 사용자 대시보드', action: () => window.open('https://github-board-swart.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: 'IP 대시보드', action: () => window.open('https://ip-board-nu.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '이미지 변환', action: () => window.open('https://core-image-converter.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '이미지 편집', action: () => window.open('https://pixedit.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '비디오 편집', action: () => window.open('https://core-video-editor.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '플로우차트', action: () => window.open('https://ai-flowchart-lovat.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false }
       ] 
     },
     { 
