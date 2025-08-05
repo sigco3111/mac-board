@@ -68,6 +68,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
       items: [
         { label: 'GitHub 사용자 대시보드', action: () => window.open('https://github-board-swart.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
         { label: 'IP 대시보드', action: () => window.open('https://ip-board-nu.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: '마크다운 에디터', action: () => window.open('https://core-markdown-editor.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
         { label: '이미지 변환', action: () => window.open('https://core-image-converter.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
         { label: '이미지 편집', action: () => window.open('https://pixedit.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
         { label: '비디오 편집', action: () => window.open('https://core-video-editor.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
