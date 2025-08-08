@@ -53,6 +53,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onLogout, user }) => {
       name: '이동', 
       items: [
         { label: 'AI 테크 허브', action: () => window.open('https://tech-toolkit-hub.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
+        { label: 'AI 뉴스 아카이브', action: () => window.open('https://www.notion.so/AI-24976f2e9097809caecdebede4ee8e2c', '_blank', 'noopener,noreferrer'), disabled: false },
         { label: '데브캔버스', action: () => window.open('https://dev-canvas-pi.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },        
         { label: '스팀 대시보드', action: () => window.open('https://steam-board.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
         { label: '데이터 지도', action: () => window.open('https://world-data-map.vercel.app/', '_blank', 'noopener,noreferrer'), disabled: false },
